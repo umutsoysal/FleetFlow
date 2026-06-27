@@ -22,7 +22,9 @@ class _FleetMapState extends State<FleetMap> {
     final fleet = context.watch<FleetManager>();
     final boats = fleet.activeBoats;
 
-    final ownPos = fleet.ownPosition;
+    // Use AIS position when available; only fall back to GPS when no AIS fix.
+    final ownPos = fleet.ownBoat?.position ?? fleet.gpsPosition;
+    final ownName = fleet.ownBoat?.displayName ?? 'Own Vessel';
     if ((boats.isNotEmpty || ownPos != null) && !_hasCentered) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -30,24 +32,42 @@ class _FleetMapState extends State<FleetMap> {
       });
     }
 
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: const LatLng(41.885, -87.618),
-        initialZoom: 13,
-      ),
+    return Stack(
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.fleetflow.app',
-          tileBuilder: _darkTileBuilder,
-        ),
-        MarkerLayer(
-          markers: [
-            ...boats.map((boat) => _buildBoatMarker(boat)),
-            if (ownPos != null)
-              _buildOwnBoatMarker(ownPos, fleet.ownCourse, fleet.ownSpeed),
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: const LatLng(41.885, -87.618),
+            initialZoom: 13,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.fleetflow.app',
+              tileBuilder: _darkTileBuilder,
+            ),
+            MarkerLayer(
+              markers: [
+                ...boats
+                    .where((b) => b.mmsi != fleet.ownMmsi)
+                    .map((boat) => _buildBoatMarker(boat)),
+                if (ownPos != null)
+                  _buildOwnBoatMarker(ownPos, fleet.ownCourse, fleet.ownSpeed, ownName),
+              ],
+            ),
           ],
+        ),
+        Positioned(
+          right: 12,
+          bottom: 12,
+          child: FloatingActionButton.small(
+            heroTag: 'fit_fleet',
+            tooltip: 'Fit all boats',
+            onPressed: boats.isNotEmpty || ownPos != null
+                ? () => _fitToFleet(boats, ownPos)
+                : null,
+            child: const Icon(Icons.fit_screen),
+          ),
         ),
       ],
     );
@@ -103,7 +123,7 @@ class _FleetMapState extends State<FleetMap> {
     );
   }
 
-  Marker _buildOwnBoatMarker(LatLng position, double course, double speed) {
+  Marker _buildOwnBoatMarker(LatLng position, double course, double speed, String name) {
     return Marker(
       point: position,
       width: 110,
@@ -119,7 +139,7 @@ class _FleetMapState extends State<FleetMap> {
               border: Border.all(color: Colors.tealAccent, width: 1),
             ),
             child: Text(
-              'Esprit d\'Ecosse\n${speed.toStringAsFixed(1)} kn',
+              '$name\n${speed.toStringAsFixed(1)} kn',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.tealAccent,

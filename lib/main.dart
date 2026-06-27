@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/fleet_manager.dart';
 import 'screens/dashboard_screen.dart';
 
-void main() {
-  runApp(const FleetFlowApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  runApp(FleetFlowApp(prefs: prefs));
 }
 
 class FleetFlowApp extends StatelessWidget {
-  const FleetFlowApp({super.key});
+  final SharedPreferences prefs;
+  const FleetFlowApp({super.key, required this.prefs});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => FleetManager(),
+      create: (_) => FleetManager(prefs: prefs),
       child: MaterialApp(
         title: 'FleetFlow',
         debugShowCheckedModeBanner: false,

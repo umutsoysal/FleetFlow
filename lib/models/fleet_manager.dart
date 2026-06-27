@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'boat.dart';
 import '../networking/nmea_connection.dart';
 import '../networking/nmea_parser.dart';
@@ -33,6 +34,10 @@ class FleetManager extends ChangeNotifier {
   String _errorMessage = '';
   String host = '192.168.1.1';
   int port = 10110;
+
+  static const _keyHost = 'nmea_host';
+  static const _keyPort = 'nmea_port';
+  static const _keyMmsi = 'nmea_mmsi';
   DateTime? lastMessageTime;
   int messageCount = 0;
 
@@ -40,7 +45,7 @@ class FleetManager extends ChangeNotifier {
   final _parser = NMEAParser();
   final _aisDecoder = AISDecoder();
 
-  int? ownMmsi;
+  int? ownMmsi = 235001001; // ESPRIT D'ECOSSE — override in Connection Settings for real vessel
 
   // ── GPS backup ───────────────────────────────────────────────────────────
   LatLng? _gpsPosition;
@@ -74,8 +79,25 @@ class FleetManager extends ChangeNotifier {
     return '—';
   }
 
-  FleetManager() {
+  FleetManager({SharedPreferences? prefs}) {
+    if (prefs != null) {
+      host = prefs.getString(_keyHost) ?? host;
+      port = prefs.getInt(_keyPort) ?? port;
+      ownMmsi = prefs.getInt(_keyMmsi) ?? ownMmsi;
+    }
     _startGpsTracking();
+    connect();
+  }
+
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyHost, host);
+    await prefs.setInt(_keyPort, port);
+    if (ownMmsi != null) {
+      await prefs.setInt(_keyMmsi, ownMmsi!);
+    } else {
+      await prefs.remove(_keyMmsi);
+    }
   }
 
   Future<void> _startGpsTracking() async {
@@ -134,6 +156,7 @@ class FleetManager extends ChangeNotifier {
 
   void connect() {
     disconnect();
+    _saveSettings();
     _connectionState = ConnectionState.connecting;
     notifyListeners();
 

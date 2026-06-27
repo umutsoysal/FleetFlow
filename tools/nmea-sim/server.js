@@ -201,6 +201,16 @@ const tcpServer = net.createServer(socket => {
   socket.on('error', () => tcpClients.delete(socket));
 });
 
+tcpServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[TCP]  Port ${TCP_PORT} is already in use.`);
+    console.error(`[TCP]  Run:  lsof -ti :${TCP_PORT} | xargs kill -9`);
+    console.error(`[TCP]  Then restart the simulator.`);
+    process.exit(1);
+  }
+  throw err;
+});
+
 tcpServer.listen(TCP_PORT, () =>
   console.log(`[TCP]  NMEA server  →  :${TCP_PORT}`)
 );

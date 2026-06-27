@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 class NMEAConnection {
@@ -12,6 +13,7 @@ class NMEAConnection {
 
   Socket? _socket;
   String _buffer = '';
+  bool _cancelled = false;
 
   NMEAConnection({
     required this.host,
@@ -24,25 +26,36 @@ class NMEAConnection {
 
   Future<void> connect() async {
     try {
-      _socket = await Socket.connect(host, port, timeout: const Duration(seconds: 10));
+      log('[NMEA] Connecting to $host:$port…');
+      final socket = await Socket.connect(host, port, timeout: const Duration(seconds: 10));
+      if (_cancelled) {
+        socket.destroy();
+        return;
+      }
+      _socket = socket;
+      log('[NMEA] Connected to $host:$port');
       onConnected();
 
       _socket!.cast<List<int>>().transform(ascii.decoder).listen(
         _onDataReceived,
         onError: (error) {
-          onError(error.toString());
+          log('[NMEA] Stream error: $error');
+          if (!_cancelled) onError(error.toString());
         },
         onDone: () {
-          onDisconnected();
+          log('[NMEA] Connection closed by remote');
+          if (!_cancelled) onDisconnected();
         },
         cancelOnError: false,
       );
     } catch (e) {
-      onError(e.toString());
+      log('[NMEA] Connection failed: $e');
+      if (!_cancelled) onError(e.toString());
     }
   }
 
   void disconnect() {
+    _cancelled = true;
     _socket?.destroy();
     _socket = null;
     _buffer = '';
