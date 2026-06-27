@@ -46,6 +46,17 @@ class _FleetMapState extends State<FleetMap> {
               userAgentPackageName: 'com.fleetflow.app',
               tileBuilder: _darkTileBuilder,
             ),
+            if (ownPos != null)
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _circlePoints(ownPos, fleet.coverageRadiusNm * 1852.0),
+                    color: Colors.cyanAccent.withValues(alpha: 0.35),
+                    strokeWidth: 1.5,
+                    pattern: StrokePattern.dashed(segments: [12, 8]),
+                  ),
+                ],
+              ),
             MarkerLayer(
               markers: [
                 ...boats
@@ -160,6 +171,28 @@ class _FleetMapState extends State<FleetMap> {
         ],
       ),
     );
+  }
+
+  /// Generates [steps] points approximating a geodesic circle of [radiusMeters]
+  /// around [center] using the spherical Earth model.
+  List<LatLng> _circlePoints(LatLng center, double radiusMeters, {int steps = 180}) {
+    const R = 6371000.0;
+    final lat1 = center.latitude * math.pi / 180;
+    final lon1 = center.longitude * math.pi / 180;
+    final d = radiusMeters / R;
+    final pts = List.generate(steps + 1, (i) {
+      final bearing = 2 * math.pi * i / steps;
+      final lat2 = math.asin(
+        math.sin(lat1) * math.cos(d) +
+        math.cos(lat1) * math.sin(d) * math.cos(bearing),
+      );
+      final lon2 = lon1 + math.atan2(
+        math.sin(bearing) * math.sin(d) * math.cos(lat1),
+        math.cos(d) - math.sin(lat1) * math.sin(lat2),
+      );
+      return LatLng(lat2 * 180 / math.pi, lon2 * 180 / math.pi);
+    });
+    return pts;
   }
 
   void _fitToFleet(List<Boat> boats, LatLng? ownPosition) {

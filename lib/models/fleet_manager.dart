@@ -38,6 +38,15 @@ class FleetManager extends ChangeNotifier {
   static const _keyHost = 'nmea_host';
   static const _keyPort = 'nmea_port';
   static const _keyMmsi = 'nmea_mmsi';
+  static const _keyCoverage = 'coverage_radius_nm';
+
+  double _coverageRadiusNm = 20;
+  double get coverageRadiusNm => _coverageRadiusNm;
+  set coverageRadiusNm(double v) {
+    _coverageRadiusNm = v;
+    notifyListeners();
+    _saveSettings();
+  }
   DateTime? lastMessageTime;
   int messageCount = 0;
 
@@ -84,6 +93,7 @@ class FleetManager extends ChangeNotifier {
       host = prefs.getString(_keyHost) ?? host;
       port = prefs.getInt(_keyPort) ?? port;
       ownMmsi = prefs.getInt(_keyMmsi) ?? ownMmsi;
+      coverageRadiusNm = prefs.getDouble(_keyCoverage) ?? _coverageRadiusNm;
     }
     _startGpsTracking();
     connect();
@@ -93,6 +103,7 @@ class FleetManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyHost, host);
     await prefs.setInt(_keyPort, port);
+    await prefs.setDouble(_keyCoverage, coverageRadiusNm);
     if (ownMmsi != null) {
       await prefs.setInt(_keyMmsi, ownMmsi!);
     } else {

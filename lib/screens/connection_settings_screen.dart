@@ -14,6 +14,7 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
   late TextEditingController _hostController;
   late TextEditingController _portController;
   late TextEditingController _mmsiController;
+  late TextEditingController _coverageController;
 
   @override
   void initState() {
@@ -24,6 +25,9 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
     _mmsiController = TextEditingController(
       text: fleet.ownMmsi?.toString() ?? '',
     );
+    _coverageController = TextEditingController(
+      text: fleet.coverageRadiusNm.toStringAsFixed(0),
+    );
   }
 
   @override
@@ -31,6 +35,7 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
     _hostController.dispose();
     _portController.dispose();
     _mmsiController.dispose();
+    _coverageController.dispose();
     super.dispose();
   }
 
@@ -93,6 +98,24 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
               prefixIcon: Icon(Icons.directions_boat),
             ),
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _coverageController,
+            decoration: const InputDecoration(
+              labelText: 'Coverage Circle Radius (nm)',
+              hintText: '20',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.radar),
+              suffixText: 'nm',
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (v) {
+              final parsed = double.tryParse(v.trim());
+              if (parsed != null && parsed > 0) {
+                context.read<FleetManager>().coverageRadiusNm = parsed;
+              }
+            },
           ),
           const SizedBox(height: 24),
           Row(
