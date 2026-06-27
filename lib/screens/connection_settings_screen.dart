@@ -117,6 +117,26 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
               }
             },
           ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.my_location, size: 20),
+              const SizedBox(width: 12),
+              const Text('Own boat source', style: TextStyle(fontWeight: FontWeight.w500)),
+              const Spacer(),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('AIS'), icon: Icon(Icons.settings_input_antenna, size: 16)),
+                  ButtonSegment(value: true,  label: Text('GPS'), icon: Icon(Icons.gps_fixed, size: 16)),
+                ],
+                selected: {fleet.useGpsForOwnBoat},
+                onSelectionChanged: (s) => fleet.useGpsForOwnBoat = s.first,
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           Row(
             children: [

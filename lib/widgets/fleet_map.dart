@@ -23,8 +23,8 @@ class _FleetMapState extends State<FleetMap> {
     final boats = fleet.activeBoats;
 
     // Use AIS position when available; only fall back to GPS when no AIS fix.
-    final ownPos = fleet.ownBoat?.position ?? fleet.gpsPosition;
-    final ownName = fleet.ownBoat?.displayName ?? 'Own Vessel';
+    final ownPos = fleet.ownPosition;
+    final ownName = fleet.ownBoatDisplayName;
     if ((boats.isNotEmpty || ownPos != null) && !_hasCentered) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {

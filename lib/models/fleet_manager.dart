@@ -39,6 +39,7 @@ class FleetManager extends ChangeNotifier {
   static const _keyPort = 'nmea_port';
   static const _keyMmsi = 'nmea_mmsi';
   static const _keyCoverage = 'coverage_radius_nm';
+  static const _keyGpsSource = 'use_gps_for_own_boat';
   static const _keyFleetMmsis = 'fleet_mmsis';
   static const _keyFleetOnly = 'fleet_only';
 
@@ -114,22 +115,34 @@ class FleetManager extends ChangeNotifier {
     return (boat != null && !boat.isStale) ? boat : null;
   }
 
-  /// Best available position: AIS first, GPS fallback.
-  LatLng? get ownPosition => ownBoat?.position ?? _gpsPosition;
+  /// Best available position: respects [useGpsForOwnBoat].
+  LatLng? get ownPosition => useGpsForOwnBoat ? _gpsPosition : (ownBoat?.position ?? _gpsPosition);
 
-  /// Best available course: AIS first, GPS fallback.
-  double get ownCourse => ownBoat?.courseOverGround ?? _gpsCourse;
+  /// Best available course: respects [useGpsForOwnBoat].
+  double get ownCourse => useGpsForOwnBoat ? _gpsCourse : (ownBoat?.courseOverGround ?? _gpsCourse);
 
-  /// Best available speed (knots): AIS first, GPS fallback.
-  double get ownSpeed => ownBoat?.speedOverGround ?? _gpsSpeed;
+  /// Best available speed (knots): respects [useGpsForOwnBoat].
+  double get ownSpeed => useGpsForOwnBoat ? _gpsSpeed : (ownBoat?.speedOverGround ?? _gpsSpeed);
+
+  /// Display name for the own-boat marker.
+  String get ownBoatDisplayName => useGpsForOwnBoat ? 'Own Vessel' : (ownBoat?.displayName ?? 'Own Vessel');
+
+  bool _useGpsForOwnBoat = false;
+  bool get useGpsForOwnBoat => _useGpsForOwnBoat;
+  set useGpsForOwnBoat(bool v) {
+    _useGpsForOwnBoat = v;
+    notifyListeners();
+    _saveSettings();
+  }
 
   /// Raw GPS position from the device, regardless of AIS.
   LatLng? get gpsPosition => _gpsPosition;
 
   /// Which source is currently driving the own-boat marker.
   String get ownPositionSource {
+    if (useGpsForOwnBoat) return _gpsPosition != null ? 'GPS' : '—';
     if (ownBoat != null) return 'AIS';
-    if (_gpsPosition != null) return 'GPS';
+    if (_gpsPosition != null) return 'GPS (fallback)';
     return '—';
   }
 
@@ -139,6 +152,7 @@ class FleetManager extends ChangeNotifier {
       port = prefs.getInt(_keyPort) ?? port;
       ownMmsi = prefs.getInt(_keyMmsi) ?? ownMmsi;
       _coverageRadiusNm = prefs.getDouble(_keyCoverage) ?? _coverageRadiusNm;
+      _useGpsForOwnBoat = prefs.getBool(_keyGpsSource) ?? _useGpsForOwnBoat;
       _fleetOnly = prefs.getBool(_keyFleetOnly) ?? false;
       final savedMmsis = prefs.getStringList(_keyFleetMmsis);
       if (savedMmsis != null) {
@@ -154,6 +168,7 @@ class FleetManager extends ChangeNotifier {
     await prefs.setString(_keyHost, host);
     await prefs.setInt(_keyPort, port);
     await prefs.setDouble(_keyCoverage, coverageRadiusNm);
+    await prefs.setBool(_keyGpsSource, _useGpsForOwnBoat);
     await prefs.setBool(_keyFleetOnly, _fleetOnly);
     await prefs.setStringList(
       _keyFleetMmsis,
