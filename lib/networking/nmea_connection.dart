@@ -27,7 +27,7 @@ class NMEAConnection {
       _socket = await Socket.connect(host, port, timeout: const Duration(seconds: 10));
       onConnected();
 
-      _socket!.transform(ascii.decoder).listen(
+      _socket!.cast<List<int>>().transform(ascii.decoder).listen(
         _onDataReceived,
         onError: (error) {
           onError(error.toString());
