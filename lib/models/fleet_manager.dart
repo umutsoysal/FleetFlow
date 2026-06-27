@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'boat.dart';
@@ -142,36 +141,6 @@ class FleetManager extends ChangeNotifier {
     boat.name = data.name.trim();
     boat.callSign = data.callSign.trim();
     boat.shipType = ShipType.fromAIS(data.shipType);
-  }
-
-  void injectMockData() {
-    final rng = Random();
-    final mockBoats = [
-      (123456789, 'WIND DANCER', 41.8850, -87.6180, 7.2, 45.0),
-      (234567890, 'BLUE HORIZON', 41.8900, -87.6100, 6.8, 52.0),
-      (345678901, 'SWIFT CURRENT', 41.8780, -87.6250, 8.1, 38.0),
-      (456789012, 'SEA SPIRIT', 41.8920, -87.6050, 5.9, 60.0),
-      (567890123, 'WAVE RIDER', 41.8800, -87.6300, 7.5, 42.0),
-      (678901234, 'STORM CHASER', 41.8870, -87.6150, 6.3, 55.0),
-    ];
-
-    for (final (mmsi, name, lat, lon, sog, cog) in mockBoats) {
-      final boat = Boat(
-        mmsi: mmsi,
-        name: name,
-        position: LatLng(lat, lon),
-        speedOverGround: sog,
-        courseOverGround: cog,
-        trueHeading: cog,
-        navigationStatus: NavigationStatus.underWaySailing,
-        shipType: ShipType.sailingVessel,
-      );
-      for (var i = 0; i < 10; i++) {
-        boat.addSpeedSample(sog + (rng.nextDouble() * 3 - 1.5));
-      }
-      _boats[mmsi] = boat;
-    }
-    notifyListeners();
   }
 
   @override

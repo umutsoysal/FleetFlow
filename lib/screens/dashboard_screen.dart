@@ -12,7 +12,7 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fleet = context.watch<FleetManager>();
+    final fleet = context.read<FleetManager>();
     final isWide = MediaQuery.of(context).size.width > 700;
 
     return Scaffold(
@@ -24,11 +24,6 @@ class DashboardScreen extends StatelessWidget {
         ),
         leadingWidth: 160,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sailing),
-            tooltip: 'Load mock data',
-            onPressed: fleet.injectMockData,
-          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
