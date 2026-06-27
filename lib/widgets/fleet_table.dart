@@ -9,7 +9,7 @@ class FleetTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fleet = context.watch<FleetManager>();
-    final boats = fleet.sortedBoats;
+    final boats = fleet.activeBoats;
 
     if (boats.isEmpty) {
       return const Center(

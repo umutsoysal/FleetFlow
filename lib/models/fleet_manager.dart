@@ -39,6 +39,8 @@ class FleetManager extends ChangeNotifier {
   static const _keyPort = 'nmea_port';
   static const _keyMmsi = 'nmea_mmsi';
   static const _keyCoverage = 'coverage_radius_nm';
+  static const _keyFleetMmsis = 'fleet_mmsis';
+  static const _keyFleetOnly = 'fleet_only';
 
   double _coverageRadiusNm = 20;
   double get coverageRadiusNm => _coverageRadiusNm;
@@ -54,7 +56,50 @@ class FleetManager extends ChangeNotifier {
   final _parser = NMEAParser();
   final _aisDecoder = AISDecoder();
 
-  int? ownMmsi = 235001001; // ESPRIT D'ECOSSE — override in Connection Settings for real vessel
+  int? ownMmsi = 235001001;
+
+  // ── Fleet filtering ──────────────────────────────────────────────────────
+  final Set<int> _fleetMmsis = {};
+  bool _fleetOnly = false;
+
+  Set<int> get fleetMmsis => Set.unmodifiable(_fleetMmsis);
+  bool get fleetOnly => _fleetOnly;
+
+  set fleetOnly(bool value) {
+    _fleetOnly = value;
+    _saveSettings();
+    notifyListeners();
+  }
+
+  bool isInFleet(int mmsi) => _fleetMmsis.contains(mmsi);
+
+  void addToFleet(int mmsi) {
+    _fleetMmsis.add(mmsi);
+    _saveSettings();
+    notifyListeners();
+  }
+
+  void removeFromFleet(int mmsi) {
+    _fleetMmsis.remove(mmsi);
+    _saveSettings();
+    notifyListeners();
+  }
+
+  void toggleFleetMembership(int mmsi) {
+    if (_fleetMmsis.contains(mmsi)) {
+      _fleetMmsis.remove(mmsi);
+    } else {
+      _fleetMmsis.add(mmsi);
+    }
+    _saveSettings();
+    notifyListeners();
+  }
+
+  List<Boat> get allDiscoveredBoats {
+    final list = _boats.values.where((b) => b.mmsi != ownMmsi).toList();
+    list.sort((a, b) => a.displayName.compareTo(b.displayName));
+    return list;
+  }
 
   // ── GPS backup ───────────────────────────────────────────────────────────
   LatLng? _gpsPosition;
@@ -93,7 +138,12 @@ class FleetManager extends ChangeNotifier {
       host = prefs.getString(_keyHost) ?? host;
       port = prefs.getInt(_keyPort) ?? port;
       ownMmsi = prefs.getInt(_keyMmsi) ?? ownMmsi;
-      coverageRadiusNm = prefs.getDouble(_keyCoverage) ?? _coverageRadiusNm;
+      _coverageRadiusNm = prefs.getDouble(_keyCoverage) ?? _coverageRadiusNm;
+      _fleetOnly = prefs.getBool(_keyFleetOnly) ?? false;
+      final savedMmsis = prefs.getStringList(_keyFleetMmsis);
+      if (savedMmsis != null) {
+        _fleetMmsis.addAll(savedMmsis.map((s) => int.tryParse(s)).whereType<int>());
+      }
     }
     _startGpsTracking();
     connect();
@@ -104,6 +154,11 @@ class FleetManager extends ChangeNotifier {
     await prefs.setString(_keyHost, host);
     await prefs.setInt(_keyPort, port);
     await prefs.setDouble(_keyCoverage, coverageRadiusNm);
+    await prefs.setBool(_keyFleetOnly, _fleetOnly);
+    await prefs.setStringList(
+      _keyFleetMmsis,
+      _fleetMmsis.map((m) => m.toString()).toList(),
+    );
     if (ownMmsi != null) {
       await prefs.setInt(_keyMmsi, ownMmsi!);
     } else {
@@ -147,8 +202,13 @@ class FleetManager extends ChangeNotifier {
     return list;
   }
 
-  List<Boat> get activeBoats =>
-      sortedBoats.where((b) => !b.isStale && b.mmsi != ownMmsi).toList();
+  List<Boat> get activeBoats {
+    var list = sortedBoats.where((b) => !b.isStale && b.mmsi != ownMmsi);
+    if (_fleetOnly && _fleetMmsis.isNotEmpty) {
+      list = list.where((b) => _fleetMmsis.contains(b.mmsi));
+    }
+    return list.toList();
+  }
 
   double get fleetAverageSpeed {
     final active = activeBoats;
