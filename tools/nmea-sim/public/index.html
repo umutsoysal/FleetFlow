@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FleetFlow Simulator</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <span class="logo">⛵ FleetFlow Simulator</span>
+  <div id="ws-badge"></div>
+
+  <div class="header-sep"></div>
+
+  <button id="btn-play">▶ Play</button>
+
+  <select id="tick-select" title="Simulation tick interval">
+    <option value="500">0.5 s</option>
+    <option value="1000">1 s</option>
+    <option value="2000" selected>2 s</option>
+    <option value="5000">5 s</option>
+  </select>
+
+  <span id="tcp-info">No app connected</span>
+  <button id="btn-add">＋ Add Boat</button>
+</header>
+
+<main>
+  <aside id="sidebar">
+    <div id="boat-list"></div>
+  </aside>
+  <div id="map"></div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

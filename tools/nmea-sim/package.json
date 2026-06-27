@@ -1,0 +1,14 @@
+{
+  "name": "fleetflow-nmea-sim",
+  "version": "1.0.0",
+  "description": "Development simulator — NMEA/AIS TCP server + web UI for FleetFlow",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  }
+}
