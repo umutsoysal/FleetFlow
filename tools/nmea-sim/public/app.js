@@ -80,21 +80,22 @@ function initMap() {
   });
 }
 
-function boatIcon(heading, name, sog) {
-  const angle = (heading || 0).toFixed(0);
-  const label = `${name}  ${sog.toFixed(1)}kn`;
+function boatIcon(boat) {
+  const angle = (boat.heading || 0).toFixed(0);
+  const label = `${boat.name}  ${boat.sog.toFixed(1)}kn`;
+  const fill  = boat.isOwn ? '#26c6da' : '#4fc3f7';
   return L.divIcon({
     className: '',
     html: `
-      <div class="boat-marker-wrap">
+      <div class="boat-marker-wrap${boat.isOwn ? ' own-boat' : ''}">
         <div class="boat-marker-arrow" style="transform:rotate(${angle}deg)">
           <svg viewBox="0 0 20 28" width="20" height="28">
             <polygon points="10,1 19,26 10,21 1,26"
-              fill="#4fc3f7" stroke="rgba(255,255,255,0.75)" stroke-width="1.2"
+              fill="${fill}" stroke="rgba(255,255,255,0.75)" stroke-width="1.2"
               stroke-linejoin="round"/>
           </svg>
         </div>
-        <div class="boat-marker-label">${escHtml(label)}</div>
+        <div class="boat-marker-label${boat.isOwn ? ' own-boat' : ''}">${escHtml(label)}</div>
       </div>`,
     iconSize: [100, 50],
     iconAnchor: [50, 20],
@@ -112,7 +113,7 @@ function renderMapBoats() {
   for (const boat of state.boats) {
     if (!markers.has(boat.mmsi)) {
       const marker = L.marker([boat.lat, boat.lon], {
-        icon: boatIcon(boat.heading, boat.name, boat.sog),
+        icon: boatIcon(boat),
         draggable: true,
       }).addTo(map);
 
@@ -125,7 +126,7 @@ function renderMapBoats() {
     } else {
       const { marker } = markers.get(boat.mmsi);
       marker.setLatLng([boat.lat, boat.lon]);
-      marker.setIcon(boatIcon(boat.heading, boat.name, boat.sog));
+      marker.setIcon(boatIcon(boat));
     }
   }
 }
@@ -180,7 +181,7 @@ function renderSidebar() {
 
 function buildCard(boat) {
   const card = document.createElement('div');
-  card.className = 'boat-card';
+  card.className = boat.isOwn ? 'boat-card own-boat' : 'boat-card';
   card.dataset.mmsi = boat.mmsi;
   card.innerHTML = cardHTML(boat);
   bindCardEvents(card, boat.mmsi);
@@ -190,7 +191,7 @@ function buildCard(boat) {
 function cardHTML(boat) {
   return `
     <div class="card-header">
-      <span class="boat-icon">⛵</span>
+      <span class="boat-icon">${boat.isOwn ? '🌊' : '⛵'}</span>
       <input class="name-input" type="text" value="${escHtml(boat.name)}"
              placeholder="Vessel name" title="Vessel name (sent via AIS type 5)">
       <span class="mmsi-badge">${boat.mmsi}</span>

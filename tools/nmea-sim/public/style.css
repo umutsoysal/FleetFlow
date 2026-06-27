@@ -132,6 +132,11 @@ main {
 }
 .boat-card:hover { border-color: var(--accent-dim); }
 .boat-card.selected { border-color: var(--accent); }
+.boat-card.own-boat { border-color: #26c6da; box-shadow: 0 0 0 1px #26c6da33; }
+.boat-card.own-boat .card-header { background: #0d2f33; }
+.boat-card.own-boat .name-input { color: #26c6da; }
+.boat-card.own-boat .mmsi-badge::before { content: 'OWN · '; color: #26c6da; font-weight: 700; }
+.boat-marker-label.own-boat { color: #26c6da; font-weight: 700; }
 
 .card-header {
   display: flex;

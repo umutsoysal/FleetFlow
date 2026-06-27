@@ -13,6 +13,7 @@ class ConnectionSettingsScreen extends StatefulWidget {
 class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
   late TextEditingController _hostController;
   late TextEditingController _portController;
+  late TextEditingController _mmsiController;
 
   @override
   void initState() {
@@ -20,12 +21,16 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
     final fleet = context.read<FleetManager>();
     _hostController = TextEditingController(text: fleet.host);
     _portController = TextEditingController(text: fleet.port.toString());
+    _mmsiController = TextEditingController(
+      text: fleet.ownMmsi?.toString() ?? '',
+    );
   }
 
   @override
   void dispose() {
     _hostController.dispose();
     _portController.dispose();
+    _mmsiController.dispose();
     super.dispose();
   }
 
@@ -77,6 +82,18 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
             ),
             keyboardType: TextInputType.number,
           ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _mmsiController,
+            decoration: const InputDecoration(
+              labelText: 'Own MMSI (optional)',
+              hintText: '338123456',
+              helperText: 'Shows your boat in teal using AIS data instead of GPS',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.directions_boat),
+            ),
+            keyboardType: TextInputType.number,
+          ),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -96,6 +113,7 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
                       ? () {
                           fleet.host = _hostController.text.trim();
                           fleet.port = int.tryParse(_portController.text) ?? 10110;
+                          fleet.ownMmsi = int.tryParse(_mmsiController.text.trim());
                           fleet.connect();
                         }
                       : null,
@@ -121,6 +139,15 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
             fleet.lastMessageTime != null
                 ? '${DateTime.now().difference(fleet.lastMessageTime!).inSeconds}s ago'
                 : '—',
+          ),
+          const Divider(height: 24),
+          _infoRow('Own boat source', fleet.ownPositionSource),
+          _infoRow(
+            'GPS backup',
+            fleet.gpsPosition != null
+                ? '${fleet.gpsPosition!.latitude.toStringAsFixed(5)}, '
+                  '${fleet.gpsPosition!.longitude.toStringAsFixed(5)}'
+                : 'unavailable',
           ),
           const SizedBox(height: 24),
         ],

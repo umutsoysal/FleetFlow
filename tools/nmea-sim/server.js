@@ -161,9 +161,10 @@ function createBoat(overrides = {}) {
     sog:     6,
     cog:    45,
     heading: 45,
+    isOwn:  false,
     ...overrides,
   };
-  boats.set(mmsi, boat);
+  boats.set(boat.mmsi, boat);
   return boat;
 }
 
@@ -171,6 +172,8 @@ function createBoat(overrides = {}) {
 createBoat({ name: 'WIND DANCER',   callSign: 'WD01', lat: 41.8850, lon: -87.6180, sog: 7.2, cog: 45,  heading: 45  });
 createBoat({ name: 'BLUE HORIZON',  callSign: 'BH01', lat: 41.8900, lon: -87.6100, sog: 6.8, cog: 52,  heading: 52  });
 createBoat({ name: 'SWIFT CURRENT', callSign: 'SC01', lat: 41.8780, lon: -87.6250, sog: 8.1, cog: 38,  heading: 38  });
+createBoat({ mmsi: 235001001, name: "ESPRIT D'ECOSSE", callSign: 'EDE01',
+             lat: 41.8830, lon: -87.6200, sog: 6.5, cog: 50, heading: 50, isOwn: true });
 
 // ── TCP server :10110 ─────────────────────────────────────────────────────────
 

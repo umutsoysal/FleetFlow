@@ -22,10 +22,11 @@ class _FleetMapState extends State<FleetMap> {
     final fleet = context.watch<FleetManager>();
     final boats = fleet.activeBoats;
 
-    if (boats.isNotEmpty && !_hasCentered) {
+    final ownPos = fleet.ownPosition;
+    if ((boats.isNotEmpty || ownPos != null) && !_hasCentered) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fitToFleet(boats);
+        _fitToFleet(boats, ownPos);
       });
     }
 
@@ -42,7 +43,11 @@ class _FleetMapState extends State<FleetMap> {
           tileBuilder: _darkTileBuilder,
         ),
         MarkerLayer(
-          markers: boats.map((boat) => _buildBoatMarker(boat)).toList(),
+          markers: [
+            ...boats.map((boat) => _buildBoatMarker(boat)),
+            if (ownPos != null)
+              _buildOwnBoatMarker(ownPos, fleet.ownCourse, fleet.ownSpeed),
+          ],
         ),
       ],
     );
@@ -98,11 +103,58 @@ class _FleetMapState extends State<FleetMap> {
     );
   }
 
-  void _fitToFleet(List<Boat> boats) {
-    if (boats.isEmpty) return;
+  Marker _buildOwnBoatMarker(LatLng position, double course, double speed) {
+    return Marker(
+      point: position,
+      width: 110,
+      height: 60,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade900,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.tealAccent, width: 1),
+            ),
+            child: Text(
+              'Esprit d\'Ecosse\n${speed.toStringAsFixed(1)} kn',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.tealAccent,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
+              ),
+            ),
+          ),
+          Transform.rotate(
+            angle: course * math.pi / 180,
+            child: const Icon(
+              Icons.navigation,
+              color: Colors.tealAccent,
+              size: 24,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    final lats = boats.map((b) => b.position.latitude).toList();
-    final lons = boats.map((b) => b.position.longitude).toList();
+  void _fitToFleet(List<Boat> boats, LatLng? ownPosition) {
+    final allLats = [
+      ...boats.map((b) => b.position.latitude),
+      if (ownPosition != null) ownPosition.latitude,
+    ];
+    final allLons = [
+      ...boats.map((b) => b.position.longitude),
+      if (ownPosition != null) ownPosition.longitude,
+    ];
+    if (allLats.isEmpty) return;
+
+    final lats = allLats;
+    final lons = allLons;
 
     final minLat = lats.reduce(math.min);
     final maxLat = lats.reduce(math.max);

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'boat.dart';
 import '../networking/nmea_connection.dart';
@@ -38,6 +40,70 @@ class FleetManager extends ChangeNotifier {
   final _parser = NMEAParser();
   final _aisDecoder = AISDecoder();
 
+  int? ownMmsi;
+
+  // ── GPS backup ───────────────────────────────────────────────────────────
+  LatLng? _gpsPosition;
+  double _gpsCourse = 0;
+  double _gpsSpeed = 0;
+  StreamSubscription<Position>? _positionSubscription;
+
+  /// The AIS boat for our own vessel, when visible in the stream.
+  Boat? get ownBoat {
+    if (ownMmsi == null) return null;
+    final boat = _boats[ownMmsi];
+    return (boat != null && !boat.isStale) ? boat : null;
+  }
+
+  /// Best available position: AIS first, GPS fallback.
+  LatLng? get ownPosition => ownBoat?.position ?? _gpsPosition;
+
+  /// Best available course: AIS first, GPS fallback.
+  double get ownCourse => ownBoat?.courseOverGround ?? _gpsCourse;
+
+  /// Best available speed (knots): AIS first, GPS fallback.
+  double get ownSpeed => ownBoat?.speedOverGround ?? _gpsSpeed;
+
+  /// Raw GPS position from the device, regardless of AIS.
+  LatLng? get gpsPosition => _gpsPosition;
+
+  /// Which source is currently driving the own-boat marker.
+  String get ownPositionSource {
+    if (ownBoat != null) return 'AIS';
+    if (_gpsPosition != null) return 'GPS';
+    return '—';
+  }
+
+  FleetManager() {
+    _startGpsTracking();
+  }
+
+  Future<void> _startGpsTracking() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 5,
+      ),
+    ).listen((pos) {
+      _gpsPosition = LatLng(pos.latitude, pos.longitude);
+      _gpsCourse = pos.heading;
+      _gpsSpeed = pos.speed * 1.94384; // m/s → knots
+      notifyListeners();
+    });
+  }
+
   ConnectionState get connectionState => _connectionState;
   String get errorMessage => _errorMessage;
   Map<int, Boat> get boats => Map.unmodifiable(_boats);
@@ -48,7 +114,8 @@ class FleetManager extends ChangeNotifier {
     return list;
   }
 
-  List<Boat> get activeBoats => sortedBoats.where((b) => !b.isStale).toList();
+  List<Boat> get activeBoats =>
+      sortedBoats.where((b) => !b.isStale && b.mmsi != ownMmsi).toList();
 
   double get fleetAverageSpeed {
     final active = activeBoats;
@@ -146,6 +213,7 @@ class FleetManager extends ChangeNotifier {
   @override
   void dispose() {
     disconnect();
+    _positionSubscription?.cancel();
     super.dispose();
   }
 }
