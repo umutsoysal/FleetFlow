@@ -67,9 +67,8 @@ const markers = new Map(); // mmsi → { marker, labelContent }
 function initMap() {
   map = L.map('map', { center: [41.885, -87.618], zoom: 13, zoomControl: true });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  L.tileLayer('/tiles/{z}/{x}/{y}', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
     maxZoom: 19,
   }).addTo(map);
 

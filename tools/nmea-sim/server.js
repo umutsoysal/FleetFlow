@@ -256,6 +256,36 @@ const wss        = new WebSocketServer({ server: httpServer });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Proxy map tiles server-side so the browser never makes cross-origin requests
+// (avoids ORB blocking in Chromium-based embedded browsers).
+// Tiles are cached in memory for the session to avoid hammering the CDN.
+const tileCache = new Map();
+
+app.get('/tiles/:z/:x/:y', async (req, res) => {
+  const { z, x, y } = req.params;
+  const key = `${z}/${x}/${y}`;
+  if (tileCache.has(key)) {
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(tileCache.get(key));
+  }
+  const sub = 'abcd'[Math.floor(Math.random() * 4)];
+  const url = `https://${sub}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`;
+  try {
+    const upstream = await fetch(url, {
+      headers: { 'User-Agent': 'FleetFlow-Simulator/1.0 (dev tool)' },
+    });
+    if (!upstream.ok) return res.status(upstream.status).end();
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    tileCache.set(key, buf);
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(buf);
+  } catch (e) {
+    res.status(502).end();
+  }
+});
+
 function snapshot() {
   return {
     type:       'state',
