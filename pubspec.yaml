@@ -1,7 +1,7 @@
 name: fleet_flow
 description: "Offshore race tracker for sailboats — connects to B&G Zeus3 and Cortex via AIS/NMEA"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.11.0
