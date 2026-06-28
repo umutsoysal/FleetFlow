@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/fleet_manager.dart';
+import '../models/theme_provider.dart';
 import '../widgets/fleet_summary_bar.dart';
 import '../widgets/fleet_table.dart';
 import '../widgets/fleet_map.dart';
 import '../widgets/connection_indicator.dart';
 import 'connection_settings_screen.dart';
+import 'fleet_management_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final fleet = context.read<FleetManager>();
+    final fleet = context.watch<FleetManager>();
     final isWide = MediaQuery.of(context).size.width > 700;
 
     return Scaffold(
@@ -22,8 +24,41 @@ class DashboardScreen extends StatelessWidget {
           padding: EdgeInsets.only(left: 12),
           child: ConnectionIndicator(),
         ),
-        leadingWidth: 160,
+        leadingWidth: 120,
         actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) => IconButton(
+              icon: Icon(themeProvider.mode.icon),
+              tooltip: '${themeProvider.mode.label} mode — tap to switch',
+              onPressed: themeProvider.cycle,
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              fleet.fleetOnly ? Icons.filter_alt : Icons.filter_alt_outlined,
+              color: fleet.fleetOnly ? Theme.of(context).colorScheme.primary : null,
+            ),
+            tooltip: fleet.fleetOnly ? 'Showing fleet only' : 'Showing all boats',
+            onPressed: () => fleet.fleetOnly = !fleet.fleetOnly,
+          ),
+          IconButton(
+            icon: Badge(
+              isLabelVisible: fleet.fleetMmsis.isNotEmpty,
+              label: Text('${fleet.fleetMmsis.length}'),
+              child: const Icon(Icons.groups),
+            ),
+            tooltip: 'Fleet manager',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider.value(
+                    value: fleet,
+                    child: const FleetManagementScreen(),
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {

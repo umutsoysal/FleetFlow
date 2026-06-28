@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/fleet_manager.dart';
 import '../models/boat.dart';
+import 'speed_sparkline.dart';
 
 class FleetTable extends StatelessWidget {
   const FleetTable({super.key});
@@ -9,7 +10,7 @@ class FleetTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fleet = context.watch<FleetManager>();
-    final boats = fleet.sortedBoats;
+    final boats = fleet.activeBoats;
 
     if (boats.isEmpty) {
       return const Center(
@@ -103,8 +104,68 @@ class _BoatTile extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: SpeedSparkline(
+                    samples: boat.lastHourSamples,
+                    height: 36,
+                    lineColor: _trendColor(boat.speedTrend, theme),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _TrendIndicator(trend: boat.speedTrend),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Color _trendColor(double? trend, ThemeData theme) {
+    if (trend == null) return theme.colorScheme.primary;
+    if (trend > 0.3) return Colors.green.shade300;
+    if (trend < -0.3) return Colors.red.shade300;
+    return theme.colorScheme.primary;
+  }
+}
+
+class _TrendIndicator extends StatelessWidget {
+  final double? trend;
+
+  const _TrendIndicator({required this.trend});
+
+  @override
+  Widget build(BuildContext context) {
+    if (trend == null) {
+      return const SizedBox(width: 40);
+    }
+
+    final IconData icon;
+    final Color color;
+    if (trend! > 0.3) {
+      icon = Icons.trending_up;
+      color = Colors.green.shade300;
+    } else if (trend! < -0.3) {
+      icon = Icons.trending_down;
+      color = Colors.red.shade300;
+    } else {
+      icon = Icons.trending_flat;
+      color = Colors.grey;
+    }
+
+    return SizedBox(
+      width: 40,
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: color),
+          Text(
+            '${trend! >= 0 ? '+' : ''}${trend!.toStringAsFixed(1)}',
+            style: TextStyle(fontSize: 9, color: color),
+          ),
+        ],
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../models/fleet_manager.dart';
 import '../models/boat.dart';
+import '../models/theme_provider.dart';
 
 class FleetMap extends StatefulWidget {
   const FleetMap({super.key});
@@ -23,14 +24,16 @@ class _FleetMapState extends State<FleetMap> {
     final boats = fleet.activeBoats;
 
     // Use AIS position when available; only fall back to GPS when no AIS fix.
-    final ownPos = fleet.ownBoat?.position ?? fleet.gpsPosition;
-    final ownName = fleet.ownBoat?.displayName ?? 'Own Vessel';
+    final ownPos = fleet.ownPosition;
+    final ownName = fleet.ownBoatDisplayName;
     if ((boats.isNotEmpty || ownPos != null) && !_hasCentered) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fitToFleet(boats, ownPos);
       });
     }
+
+    final themeMode = context.watch<ThemeProvider>().mode;
 
     return Stack(
       children: [
@@ -44,14 +47,22 @@ class _FleetMapState extends State<FleetMap> {
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.fleetflow.app',
-              tileBuilder: _darkTileBuilder,
+              tileBuilder: switch (themeMode) {
+                AppThemeMode.day => null,
+                AppThemeMode.night => _darkTileBuilder,
+                AppThemeMode.redNight => _redTileBuilder,
+              },
             ),
             if (ownPos != null)
               PolylineLayer(
                 polylines: [
                   Polyline(
                     points: _circlePoints(ownPos, fleet.coverageRadiusNm * 1852.0),
-                    color: Colors.cyanAccent.withValues(alpha: 0.35),
+                    color: switch (themeMode) {
+                      AppThemeMode.day => Colors.blue.withValues(alpha: 0.4),
+                      AppThemeMode.night => Colors.cyanAccent.withValues(alpha: 0.35),
+                      AppThemeMode.redNight => const Color(0xFFCC3333).withValues(alpha: 0.3),
+                    },
                     strokeWidth: 1.5,
                     pattern: StrokePattern.dashed(segments: [12, 8]),
                   ),
@@ -61,9 +72,9 @@ class _FleetMapState extends State<FleetMap> {
               markers: [
                 ...boats
                     .where((b) => b.mmsi != fleet.ownMmsi)
-                    .map((boat) => _buildBoatMarker(boat)),
+                    .map((boat) => _buildBoatMarker(boat, themeMode)),
                 if (ownPos != null)
-                  _buildOwnBoatMarker(ownPos, fleet.ownCourse, fleet.ownSpeed, ownName),
+                  _buildOwnBoatMarker(ownPos, fleet.ownCourse, fleet.ownSpeed, ownName, themeMode),
               ],
             ),
           ],
@@ -96,7 +107,38 @@ class _FleetMapState extends State<FleetMap> {
     );
   }
 
-  Marker _buildBoatMarker(Boat boat) {
+  Widget _redTileBuilder(BuildContext context, Widget tileWidget, TileImage tile) {
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix([
+        0.3, 0.1, 0.1, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 1, 0,
+      ]),
+      child: tileWidget,
+    );
+  }
+
+  Marker _buildBoatMarker(Boat boat, AppThemeMode themeMode) {
+    final Color bgColor;
+    final Color textColor;
+    final Color arrowColor;
+
+    switch (themeMode) {
+      case AppThemeMode.day:
+        bgColor = Colors.white;
+        textColor = const Color(0xFF1A1A1A);
+        arrowColor = const Color(0xFFE65100);
+      case AppThemeMode.night:
+        bgColor = Colors.black87;
+        textColor = Colors.white;
+        arrowColor = Colors.orangeAccent;
+      case AppThemeMode.redNight:
+        bgColor = const Color(0xFF1A0000);
+        textColor = const Color(0xFFCC4444);
+        arrowColor = const Color(0xFFCC3333);
+    }
+
     return Marker(
       point: boat.position,
       width: 100,
@@ -107,14 +149,17 @@ class _FleetMapState extends State<FleetMap> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.black87,
+              color: bgColor,
               borderRadius: BorderRadius.circular(4),
+              border: themeMode == AppThemeMode.day
+                  ? Border.all(color: Colors.black26, width: 0.5)
+                  : null,
             ),
             child: Text(
               '${boat.displayName}\n${boat.speedOverGround.toStringAsFixed(1)} kn',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: textColor,
                 fontSize: 9,
                 fontWeight: FontWeight.w600,
                 height: 1.3,
@@ -123,9 +168,9 @@ class _FleetMapState extends State<FleetMap> {
           ),
           Transform.rotate(
             angle: boat.courseOverGround * math.pi / 180,
-            child: const Icon(
+            child: Icon(
               Icons.navigation,
-              color: Colors.orangeAccent,
+              color: arrowColor,
               size: 22,
             ),
           ),
@@ -134,7 +179,26 @@ class _FleetMapState extends State<FleetMap> {
     );
   }
 
-  Marker _buildOwnBoatMarker(LatLng position, double course, double speed, String name) {
+  Marker _buildOwnBoatMarker(LatLng position, double course, double speed, String name, AppThemeMode themeMode) {
+    final Color bgColor;
+    final Color accentColor;
+    final Color borderColor;
+
+    switch (themeMode) {
+      case AppThemeMode.day:
+        bgColor = const Color(0xFF00695C);
+        accentColor = Colors.white;
+        borderColor = const Color(0xFF004D40);
+      case AppThemeMode.night:
+        bgColor = Colors.teal.shade900;
+        accentColor = Colors.tealAccent;
+        borderColor = Colors.tealAccent;
+      case AppThemeMode.redNight:
+        bgColor = const Color(0xFF330000);
+        accentColor = const Color(0xFFFF4444);
+        borderColor = const Color(0xFFCC3333);
+    }
+
     return Marker(
       point: position,
       width: 110,
@@ -145,15 +209,15 @@ class _FleetMapState extends State<FleetMap> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.teal.shade900,
+              color: bgColor,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.tealAccent, width: 1),
+              border: Border.all(color: borderColor, width: 1),
             ),
             child: Text(
               '$name\n${speed.toStringAsFixed(1)} kn',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.tealAccent,
+              style: TextStyle(
+                color: accentColor,
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 height: 1.3,
@@ -162,9 +226,9 @@ class _FleetMapState extends State<FleetMap> {
           ),
           Transform.rotate(
             angle: course * math.pi / 180,
-            child: const Icon(
+            child: Icon(
               Icons.navigation,
-              color: Colors.tealAccent,
+              color: accentColor,
               size: 24,
             ),
           ),
