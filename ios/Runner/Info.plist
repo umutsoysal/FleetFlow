@@ -30,6 +30,8 @@
 	<string>FleetFlow uses your location to show your position on the fleet map.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>FleetFlow uses your location to show your position on the fleet map.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>FleetFlow uses your location to show your position on the fleet map.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
