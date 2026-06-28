@@ -41,14 +41,29 @@ class Boat {
     return speedHistory.map((s) => s.speed).reduce((a, b) => a > b ? a : b);
   }
 
+  List<SpeedSample> get lastHourSamples {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 1));
+    return speedHistory.where((s) => s.timestamp.isAfter(cutoff)).toList();
+  }
+
+  double? get speedTrend {
+    final samples = lastHourSamples;
+    if (samples.length < 2) return null;
+    final recent = samples.take((samples.length ~/ 3).clamp(1, samples.length)).fold(0.0, (s, e) => s + e.speed) /
+        (samples.length ~/ 3).clamp(1, samples.length);
+    final older = samples.skip(samples.length - (samples.length ~/ 3).clamp(1, samples.length)).fold(0.0, (s, e) => s + e.speed) /
+        (samples.length ~/ 3).clamp(1, samples.length);
+    return recent - older;
+  }
+
   Duration get timeSinceUpdate => DateTime.now().difference(lastUpdate);
 
   bool get isStale => timeSinceUpdate.inSeconds > 300;
 
   void addSpeedSample(double speed) {
     speedHistory.insert(0, SpeedSample(speed: speed, timestamp: DateTime.now()));
-    if (speedHistory.length > 60) {
-      speedHistory.removeRange(60, speedHistory.length);
+    if (speedHistory.length > 720) {
+      speedHistory.removeRange(720, speedHistory.length);
     }
   }
 }

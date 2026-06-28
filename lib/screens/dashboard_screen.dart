@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/fleet_manager.dart';
+import '../models/theme_provider.dart';
 import '../widgets/fleet_summary_bar.dart';
 import '../widgets/fleet_table.dart';
 import '../widgets/fleet_map.dart';
@@ -23,8 +24,15 @@ class DashboardScreen extends StatelessWidget {
           padding: EdgeInsets.only(left: 12),
           child: ConnectionIndicator(),
         ),
-        leadingWidth: 160,
+        leadingWidth: 120,
         actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) => IconButton(
+              icon: Icon(themeProvider.mode.icon),
+              tooltip: '${themeProvider.mode.label} mode — tap to switch',
+              onPressed: themeProvider.cycle,
+            ),
+          ),
           IconButton(
             icon: Icon(
               fleet.fleetOnly ? Icons.filter_alt : Icons.filter_alt_outlined,
