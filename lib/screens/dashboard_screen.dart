@@ -8,6 +8,7 @@ import '../widgets/fleet_summary_bar.dart';
 import '../widgets/fleet_table.dart';
 import '../widgets/fleet_map.dart';
 import '../widgets/connection_indicator.dart';
+import '../widgets/scan_button.dart';
 import 'app_settings_screen.dart';
 import 'fleet_management_screen.dart';
 
@@ -29,6 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _filterKey = GlobalKey();
   final _fleetManagerKey = GlobalKey();
   final _settingsKey = GlobalKey();
+  final _scanButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -49,6 +51,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     HelpTour.start(
       context,
       steps: [
+        HelpTourStep(
+          targetKey: _scanButtonKey,
+          icon: Icons.radar,
+          title: 'Start scanning',
+          body:
+              'FleetFlow never connects on its own — that would burn '
+              'through data. Tap Start when you want live AIS traffic, '
+              'and Stop when you are done.',
+        ),
         HelpTourStep(
           targetKey: _connectionKey,
           icon: Icons.wifi,
@@ -112,8 +123,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: Icons.settings,
           title: 'Connect your instruments',
           body:
-              'Enter your chartplotter\'s IP and port in Settings, then hit '
-              'Connect. You can replay this tour from Settings anytime.',
+              'Enter your chartplotter\'s IP and port in Settings, then use '
+              'the Start button below to begin scanning. You can replay '
+              'this tour from Settings anytime.',
         ),
       ],
       onFinished: _markTourSeen,
@@ -250,6 +262,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
           ),
         ],
+      ),
+      bottomNavigationBar: KeyedSubtree(
+        key: _scanButtonKey,
+        child: const ScanButtonBar(),
       ),
     );
   }

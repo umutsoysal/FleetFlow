@@ -160,7 +160,8 @@ class FleetManager extends ChangeNotifier {
       }
     }
     _startGpsTracking();
-    connect();
+    // Scanning is user-initiated from the dashboard to avoid draining
+    // data in the background; no auto-connect on launch.
   }
 
   Future<void> _saveSettings() async {
