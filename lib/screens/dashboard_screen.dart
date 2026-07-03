@@ -58,7 +58,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           body:
               'FleetFlow never connects on its own — that would burn '
               'through data. Tap Start when you want live AIS traffic, '
-              'and Stop when you are done.',
+              'and tap again to pause. Your fleet stays on screen while '
+              'paused.',
         ),
         HelpTourStep(
           targetKey: _connectionKey,

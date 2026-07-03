@@ -37,6 +37,7 @@ class _ScanButtonBarState extends State<ScanButtonBar>
 
     final scanning = state == fm.ConnectionState.connected;
     final connecting = state == fm.ConnectionState.connecting;
+    final paused = state == fm.ConnectionState.paused;
 
     if (scanning && !_pulse.isAnimating) {
       _pulse.repeat();
@@ -45,8 +46,16 @@ class _ScanButtonBarState extends State<ScanButtonBar>
       _pulse.reset();
     }
 
-    final fillColor = scanning ? scheme.error : scheme.primary;
-    final labelColor = scanning ? scheme.onError : scheme.onPrimary;
+    final fillColor = scanning
+        ? scheme.error
+        : paused
+            ? scheme.secondary
+            : scheme.primary;
+    final labelColor = scanning
+        ? scheme.onError
+        : paused
+            ? scheme.onSecondary
+            : scheme.onPrimary;
 
     final Widget label;
     if (connecting) {
@@ -57,11 +66,15 @@ class _ScanButtonBarState extends State<ScanButtonBar>
       );
     } else {
       label = Text(
-        scanning ? 'STOP' : 'START',
+        scanning
+            ? 'PAUSE'
+            : paused
+                ? 'RESUME'
+                : 'START',
         style: TextStyle(
           color: labelColor,
           fontWeight: FontWeight.w800,
-          fontSize: 16,
+          fontSize: paused ? 13 : 16,
           letterSpacing: 2,
         ),
       );
@@ -126,9 +139,11 @@ class _ScanButtonBarState extends State<ScanButtonBar>
                       elevation: 3,
                       child: InkWell(
                         customBorder: const CircleBorder(),
-                        onTap: scanning || connecting
-                            ? fleet.disconnect
-                            : fleet.connect,
+                        onTap: scanning
+                            ? fleet.pause
+                            : connecting
+                                ? fleet.disconnect
+                                : fleet.connect,
                         child: SizedBox(
                           width: _buttonSize,
                           height: _buttonSize,
@@ -164,6 +179,9 @@ class _ScanButtonBarState extends State<ScanButtonBar>
             '${fleet.messageCount} messages';
       case fm.ConnectionState.connecting:
         return 'Connecting to ${fleet.host}:${fleet.port}…';
+      case fm.ConnectionState.paused:
+        return 'Paused — ${fleet.messageCount} messages so far, '
+            'tap to resume';
       case fm.ConnectionState.error:
         return 'Connection failed — check host in Settings';
       case fm.ConnectionState.disconnected:
