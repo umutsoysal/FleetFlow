@@ -20,6 +20,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late TextEditingController _hostController;
   late TextEditingController _portController;
   late TextEditingController _mmsiController;
+  late TextEditingController _boatNameController;
   late TextEditingController _coverageController;
   String _appVersionLabel = '';
 
@@ -31,6 +32,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _portController = TextEditingController(text: fleet.port.toString());
     _mmsiController = TextEditingController(
       text: fleet.ownMmsi?.toString() ?? '',
+    );
+    _boatNameController = TextEditingController(
+      text: fleet.configuredOwnBoatName,
     );
     _coverageController = TextEditingController(
       text: fleet.coverageRadiusNm.toStringAsFixed(0),
@@ -49,6 +53,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _hostController.dispose();
     _portController.dispose();
     _mmsiController.dispose();
+    _boatNameController.dispose();
     _coverageController.dispose();
     super.dispose();
   }
@@ -158,6 +163,22 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             child: Column(
               children: [
                 TextField(
+                  controller: _boatNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Boat name',
+                    hintText: 'Pegasus',
+                    helperText:
+                        'Used for your own-boat marker. Leave blank to fall back to AIS/default naming.',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.badge_outlined),
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (value) {
+                    context.read<FleetManager>().configuredOwnBoatName = value;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
                   controller: _mmsiController,
                   decoration: const InputDecoration(
                     labelText: 'Own MMSI (optional)',
@@ -188,6 +209,35 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       context.read<FleetManager>().coverageRadiusNm = parsed;
                     }
                   },
+                ),
+                const SizedBox(height: 16),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Own boat marker color',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _ownBoatColorOptions
+                      .map(
+                        (option) => _BoatColorChip(
+                          option: option,
+                          selected: fleet.ownBoatColor.value == option.color.value,
+                          onTap: () {
+                            fleet.ownBoatColor = option.color;
+                          },
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+                _OwnBoatPreview(
+                  name: fleet.ownBoatDisplayName,
+                  color: fleet.ownBoatColor,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -516,6 +566,117 @@ class _SettingsActionTile extends StatelessWidget {
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+class _OwnBoatColorOption {
+  final String label;
+  final Color color;
+
+  const _OwnBoatColorOption(this.label, this.color);
+}
+
+const _ownBoatColorOptions = [
+  _OwnBoatColorOption('Teal', Color(0xFF14B8A6)),
+  _OwnBoatColorOption('Blue', Color(0xFF2563EB)),
+  _OwnBoatColorOption('Orange', Color(0xFFF97316)),
+  _OwnBoatColorOption('Gold', Color(0xFFEAB308)),
+  _OwnBoatColorOption('Rose', Color(0xFFE11D48)),
+  _OwnBoatColorOption('Purple', Color(0xFF8B5CF6)),
+];
+
+class _BoatColorChip extends StatelessWidget {
+  final _OwnBoatColorOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _BoatColorChip({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? option.color.withValues(alpha: 0.16)
+              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? option.color : theme.dividerColor,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                color: option.color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(option.label),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OwnBoatPreview extends StatelessWidget {
+  final String name;
+  final Color color;
+
+  const _OwnBoatPreview({
+    required this.name,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = color.computeLuminance() > 0.45 ? Colors.black : Colors.white;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.navigation, color: color, size: 24),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              name.isEmpty ? 'Own Vessel' : name,
+              style: TextStyle(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

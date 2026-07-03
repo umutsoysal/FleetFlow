@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,8 +46,15 @@ class FleetManager extends ChangeNotifier {
   static const _keyGpsSource = 'use_gps_for_own_boat';
   static const _keyFleetMmsis = 'fleet_mmsis';
   static const _keyFleetOnly = 'fleet_only';
+  static const _keyOwnBoatName = 'own_boat_name';
+  static const _keyOwnBoatColor = 'own_boat_color';
+
+  static const defaultOwnBoatColor = Color(0xFF14B8A6);
 
   double _coverageRadiusNm = 20;
+  String _ownBoatName = '';
+  int _ownBoatColorValue = defaultOwnBoatColor.value;
+
   double get coverageRadiusNm => _coverageRadiusNm;
   set coverageRadiusNm(double v) {
     _coverageRadiusNm = v;
@@ -127,8 +135,28 @@ class FleetManager extends ChangeNotifier {
   /// Best available speed (knots): respects [useGpsForOwnBoat].
   double get ownSpeed => useGpsForOwnBoat ? _gpsSpeed : (ownBoat?.speedOverGround ?? _gpsSpeed);
 
+  String get configuredOwnBoatName => _ownBoatName;
+  set configuredOwnBoatName(String value) {
+    final trimmed = value.trim();
+    if (_ownBoatName == trimmed) return;
+    _ownBoatName = trimmed;
+    notifyListeners();
+    _saveSettings();
+  }
+
+  Color get ownBoatColor => Color(_ownBoatColorValue);
+  set ownBoatColor(Color value) {
+    if (_ownBoatColorValue == value.value) return;
+    _ownBoatColorValue = value.value;
+    notifyListeners();
+    _saveSettings();
+  }
+
   /// Display name for the own-boat marker.
-  String get ownBoatDisplayName => useGpsForOwnBoat ? 'Own Vessel' : (ownBoat?.displayName ?? 'Own Vessel');
+  String get ownBoatDisplayName {
+    if (_ownBoatName.isNotEmpty) return _ownBoatName;
+    return useGpsForOwnBoat ? 'Own Vessel' : (ownBoat?.displayName ?? 'Own Vessel');
+  }
 
   bool _useGpsForOwnBoat = false;
   bool get useGpsForOwnBoat => _useGpsForOwnBoat;
@@ -157,6 +185,8 @@ class FleetManager extends ChangeNotifier {
       _coverageRadiusNm = prefs.getDouble(_keyCoverage) ?? _coverageRadiusNm;
       _useGpsForOwnBoat = prefs.getBool(_keyGpsSource) ?? _useGpsForOwnBoat;
       _fleetOnly = prefs.getBool(_keyFleetOnly) ?? false;
+      _ownBoatName = prefs.getString(_keyOwnBoatName) ?? '';
+      _ownBoatColorValue = prefs.getInt(_keyOwnBoatColor) ?? _ownBoatColorValue;
       final savedMmsis = prefs.getStringList(_keyFleetMmsis);
       if (savedMmsis != null) {
         _fleetMmsis.addAll(savedMmsis.map((s) => int.tryParse(s)).whereType<int>());
@@ -174,6 +204,8 @@ class FleetManager extends ChangeNotifier {
     await prefs.setDouble(_keyCoverage, coverageRadiusNm);
     await prefs.setBool(_keyGpsSource, _useGpsForOwnBoat);
     await prefs.setBool(_keyFleetOnly, _fleetOnly);
+    await prefs.setString(_keyOwnBoatName, _ownBoatName);
+    await prefs.setInt(_keyOwnBoatColor, _ownBoatColorValue);
     await prefs.setStringList(
       _keyFleetMmsis,
       _fleetMmsis.map((m) => m.toString()).toList(),

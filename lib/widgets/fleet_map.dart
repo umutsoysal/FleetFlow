@@ -26,6 +26,7 @@ class _FleetMapState extends State<FleetMap> {
     // Use AIS position when available; only fall back to GPS when no AIS fix.
     final ownPos = fleet.ownPosition;
     final ownName = fleet.ownBoatDisplayName;
+    final ownColor = fleet.ownBoatColor;
     if ((boats.isNotEmpty || ownPos != null) && !_hasCentered) {
       _hasCentered = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -58,11 +59,7 @@ class _FleetMapState extends State<FleetMap> {
                 polylines: [
                   Polyline(
                     points: _circlePoints(ownPos, fleet.coverageRadiusNm * 1852.0),
-                    color: switch (themeMode) {
-                      AppThemeMode.day => Colors.blue.withValues(alpha: 0.4),
-                      AppThemeMode.night => Colors.cyanAccent.withValues(alpha: 0.35),
-                      AppThemeMode.redNight => const Color(0xFFCC3333).withValues(alpha: 0.3),
-                    },
+                    color: _ownBoatRingColor(themeMode, ownColor),
                     strokeWidth: 1.5,
                     pattern: StrokePattern.dashed(segments: [12, 8]),
                   ),
@@ -74,7 +71,14 @@ class _FleetMapState extends State<FleetMap> {
                     .where((b) => b.mmsi != fleet.ownMmsi)
                     .map((boat) => _buildBoatMarker(boat, themeMode)),
                 if (ownPos != null)
-                  _buildOwnBoatMarker(ownPos, fleet.ownCourse, fleet.ownSpeed, ownName, themeMode),
+                  _buildOwnBoatMarker(
+                    ownPos,
+                    fleet.ownCourse,
+                    fleet.ownSpeed,
+                    ownName,
+                    themeMode,
+                    ownColor,
+                  ),
               ],
             ),
           ],
@@ -179,25 +183,15 @@ class _FleetMapState extends State<FleetMap> {
     );
   }
 
-  Marker _buildOwnBoatMarker(LatLng position, double course, double speed, String name, AppThemeMode themeMode) {
-    final Color bgColor;
-    final Color accentColor;
-    final Color borderColor;
-
-    switch (themeMode) {
-      case AppThemeMode.day:
-        bgColor = const Color(0xFF00695C);
-        accentColor = Colors.white;
-        borderColor = const Color(0xFF004D40);
-      case AppThemeMode.night:
-        bgColor = Colors.teal.shade900;
-        accentColor = Colors.tealAccent;
-        borderColor = Colors.tealAccent;
-      case AppThemeMode.redNight:
-        bgColor = const Color(0xFF330000);
-        accentColor = const Color(0xFFFF4444);
-        borderColor = const Color(0xFFCC3333);
-    }
+  Marker _buildOwnBoatMarker(
+    LatLng position,
+    double course,
+    double speed,
+    String name,
+    AppThemeMode themeMode,
+    Color accentSeed,
+  ) {
+    final palette = _ownBoatPalette(themeMode, accentSeed);
 
     return Marker(
       point: position,
@@ -209,15 +203,15 @@ class _FleetMapState extends State<FleetMap> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: bgColor,
+              color: palette.background,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: borderColor, width: 1),
+              border: Border.all(color: palette.border, width: 1),
             ),
             child: Text(
               '$name\n${speed.toStringAsFixed(1)} kn',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: accentColor,
+                color: palette.foreground,
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 height: 1.3,
@@ -228,13 +222,60 @@ class _FleetMapState extends State<FleetMap> {
             angle: course * math.pi / 180,
             child: Icon(
               Icons.navigation,
-              color: accentColor,
+              color: palette.foreground,
               size: 24,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _ownBoatRingColor(AppThemeMode themeMode, Color accentSeed) {
+    return switch (themeMode) {
+      AppThemeMode.day => accentSeed.withValues(alpha: 0.35),
+      AppThemeMode.night => _shiftLightness(accentSeed, 0.18).withValues(alpha: 0.4),
+      AppThemeMode.redNight => _shiftLightness(accentSeed, 0.1).withValues(alpha: 0.32),
+    };
+  }
+
+  _OwnBoatPalette _ownBoatPalette(AppThemeMode themeMode, Color accentSeed) {
+    switch (themeMode) {
+      case AppThemeMode.day:
+        return _OwnBoatPalette(
+          background: accentSeed,
+          foreground: _bestForegroundFor(accentSeed),
+          border: _shiftLightness(accentSeed, -0.16),
+        );
+      case AppThemeMode.night:
+        return _OwnBoatPalette(
+          background: Color.alphaBlend(
+            accentSeed.withValues(alpha: 0.24),
+            Colors.black87,
+          ),
+          foreground: _shiftLightness(accentSeed, 0.2),
+          border: _shiftLightness(accentSeed, 0.14),
+        );
+      case AppThemeMode.redNight:
+        return _OwnBoatPalette(
+          background: Color.alphaBlend(
+            accentSeed.withValues(alpha: 0.18),
+            const Color(0xFF120000),
+          ),
+          foreground: _shiftLightness(accentSeed, 0.16),
+          border: _shiftLightness(accentSeed, 0.08),
+        );
+    }
+  }
+
+  Color _shiftLightness(Color color, double amount) {
+    final hsl = HSLColor.fromColor(color);
+    final nextLightness = (hsl.lightness + amount).clamp(0.0, 1.0);
+    return hsl.withLightness(nextLightness).toColor();
+  }
+
+  Color _bestForegroundFor(Color color) {
+    return color.computeLuminance() > 0.45 ? Colors.black : Colors.white;
   }
 
   /// Generates [steps] points approximating a geodesic circle of [radiusMeters]
@@ -287,4 +328,16 @@ class _FleetMapState extends State<FleetMap> {
       CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
     );
   }
+}
+
+class _OwnBoatPalette {
+  final Color background;
+  final Color foreground;
+  final Color border;
+
+  const _OwnBoatPalette({
+    required this.background,
+    required this.foreground,
+    required this.border,
+  });
 }
