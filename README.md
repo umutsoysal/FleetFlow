@@ -12,7 +12,7 @@ An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or
 - **Boat roster** — scrollable card list showing each vessel's name/MMSI, speed, course, heading, call sign, and navigation status; stale contacts (>5 min) are visually dimmed
 - **Speed history** — each boat retains the last 60 speed samples for average and peak calculations
 - **Responsive layout** — side-by-side map + roster on wide screens; stacked on narrow/mobile
-- **Mock data injection** — one-tap toolbar button loads a synthetic fleet for UI development without a live connection
+- **Simulator-ready connection flow** — connect to onboard hardware or a local simulator harness over TCP
 
 ---
 
@@ -30,7 +30,8 @@ lib/
 │   └── ais_decoder.dart             # Bit-level AIS payload decoder (msg 1/2/3 + msg 5)
 ├── screens/
 │   ├── dashboard_screen.dart        # Main scaffold with AppBar, summary bar, map, and table
-│   └── connection_settings_screen.dart  # Bottom-sheet TCP host/port config
+│   ├── app_settings_screen.dart     # Full settings experience: connection, vessel, appearance, legal
+│   └── legal_document_screen.dart   # About, Privacy Policy, Terms of Use content pages
 └── widgets/
     ├── fleet_map.dart               # flutter_map with dark tile filter and boat markers
     ├── fleet_table.dart             # Scrollable boat card list
@@ -89,9 +90,9 @@ The default host is `192.168.1.1:10110`, which is the factory default for most B
 
 ## Development
 
-### Mock data
+### Simulator harness
 
-Tap the **sailing icon** in the top-right of the dashboard to inject a synthetic fleet. This is useful for UI work when a live NMEA source is unavailable.
+Use your preferred simulator harness to feed AIS and NMEA traffic into FleetFlow over TCP during development and pre-race checks.
 
 ### Running tests
 

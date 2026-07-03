@@ -12,6 +12,7 @@ enum ConnectionState {
   disconnected,
   connecting,
   connected,
+  paused,
   error;
 
   String get label {
@@ -22,6 +23,8 @@ enum ConnectionState {
         return 'Connecting…';
       case connected:
         return 'Connected';
+      case paused:
+        return 'Paused';
       case error:
         return 'Error';
     }
@@ -160,7 +163,8 @@ class FleetManager extends ChangeNotifier {
       }
     }
     _startGpsTracking();
-    connect();
+    // Scanning is user-initiated from the dashboard to avoid draining
+    // data in the background; no auto-connect on launch.
   }
 
   Future<void> _saveSettings() async {
@@ -271,6 +275,15 @@ class FleetManager extends ChangeNotifier {
     _connection?.disconnect();
     _connection = null;
     _connectionState = ConnectionState.disconnected;
+    notifyListeners();
+  }
+
+  /// Pause listening: closes the socket so no data is consumed, but keeps
+  /// the tracked boats and presents as resumable rather than disconnected.
+  void pause() {
+    _connection?.disconnect();
+    _connection = null;
+    _connectionState = ConnectionState.paused;
     notifyListeners();
   }
 

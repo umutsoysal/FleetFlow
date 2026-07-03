@@ -16,6 +16,8 @@ class ConnectionIndicator extends StatelessWidget {
         dotColor = Colors.green;
       case fm.ConnectionState.connecting:
         dotColor = Colors.orange;
+      case fm.ConnectionState.paused:
+        dotColor = Colors.amber;
       case fm.ConnectionState.disconnected:
         dotColor = Colors.grey;
       case fm.ConnectionState.error:
@@ -23,7 +25,7 @@ class ConnectionIndicator extends StatelessWidget {
     }
 
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         Container(
           width: 10,
@@ -42,9 +44,13 @@ class ConnectionIndicator extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          fleet.connectionState.label,
-          style: Theme.of(context).textTheme.bodySmall,
+        Flexible(
+          child: Text(
+            fleet.connectionState.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ),
       ],
     );
