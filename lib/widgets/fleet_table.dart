@@ -22,7 +22,7 @@ class FleetTable extends StatelessWidget {
             Text('No boats detected', style: TextStyle(color: Colors.grey)),
             SizedBox(height: 4),
             Text(
-              'Connect to B&G/Cortex or load mock data',
+              'Connect to B&G/Cortex or your simulator harness',
               style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ],

@@ -6,7 +6,7 @@ import '../widgets/fleet_summary_bar.dart';
 import '../widgets/fleet_table.dart';
 import '../widgets/fleet_map.dart';
 import '../widgets/connection_indicator.dart';
-import 'connection_settings_screen.dart';
+import 'app_settings_screen.dart';
 import 'fleet_management_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -62,12 +62,12 @@ class DashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (_) => ChangeNotifierProvider.value(
-                  value: fleet,
-                  child: const ConnectionSettingsScreen(),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChangeNotifierProvider.value(
+                    value: fleet,
+                    child: const AppSettingsScreen(),
+                  ),
                 ),
               );
             },
