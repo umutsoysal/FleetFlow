@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../models/fleet_manager.dart' hide ConnectionState;
 import '../models/fleet_manager.dart' as fm;
 import '../models/theme_provider.dart';
 import 'legal_document_screen.dart';
 
-const _appVersionLabel = '1.0.0 (2)';
-
 class AppSettingsScreen extends StatefulWidget {
+  /// Returned as the route result when the user asks to replay the help tour.
+  static const replayTourResult = 'replay_help_tour';
+
   const AppSettingsScreen({super.key});
 
   @override
@@ -19,6 +21,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late TextEditingController _portController;
   late TextEditingController _mmsiController;
   late TextEditingController _coverageController;
+  String _appVersionLabel = '';
 
   @override
   void initState() {
@@ -26,10 +29,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     final fleet = context.read<FleetManager>();
     _hostController = TextEditingController(text: fleet.host);
     _portController = TextEditingController(text: fleet.port.toString());
-    _mmsiController = TextEditingController(text: fleet.ownMmsi?.toString() ?? '');
+    _mmsiController = TextEditingController(
+      text: fleet.ownMmsi?.toString() ?? '',
+    );
     _coverageController = TextEditingController(
       text: fleet.coverageRadiusNm.toStringAsFixed(0),
     );
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(() {
+          _appVersionLabel = '${info.version} (${info.buildNumber})';
+        });
+      }
+    });
   }
 
   @override
@@ -47,15 +59,14 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     final themeProvider = context.watch<ThemeProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _SettingsSection(
             title: 'Connection',
-            description: 'Connect to a B&G Zeus3, Cortex, or simulator harness over TCP.',
+            description:
+                'Connect to a B&G Zeus3, Cortex, or simulator harness over TCP.',
             child: Column(
               children: [
                 TextField(
@@ -84,7 +95,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: fleet.connectionState == fm.ConnectionState.connected
+                        onPressed:
+                            fleet.connectionState ==
+                                fm.ConnectionState.connected
                             ? fleet.disconnect
                             : null,
                         icon: const Icon(Icons.link_off),
@@ -94,11 +107,16 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton.icon(
-                        onPressed: fleet.connectionState != fm.ConnectionState.connected
+                        onPressed:
+                            fleet.connectionState !=
+                                fm.ConnectionState.connected
                             ? () {
                                 fleet.host = _hostController.text.trim();
-                                fleet.port = int.tryParse(_portController.text) ?? 10110;
-                                fleet.ownMmsi = int.tryParse(_mmsiController.text.trim());
+                                fleet.port =
+                                    int.tryParse(_portController.text) ?? 10110;
+                                fleet.ownMmsi = int.tryParse(
+                                  _mmsiController.text.trim(),
+                                );
                                 fleet.connect();
                               }
                             : null,
@@ -114,7 +132,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       fleet.errorMessage,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ),
                 ],
@@ -133,7 +153,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           const SizedBox(height: 16),
           _SettingsSection(
             title: 'Own Vessel',
-            description: 'Choose how your own boat is positioned and how far the coverage ring extends.',
+            description:
+                'Choose how your own boat is positioned and how far the coverage ring extends.',
             child: Column(
               children: [
                 TextField(
@@ -141,7 +162,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Own MMSI (optional)',
                     hintText: '338123456',
-                    helperText: 'Use AIS when your own vessel is in the stream.',
+                    helperText:
+                        'Use AIS when your own vessel is in the stream.',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.directions_boat),
                   ),
@@ -157,7 +179,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     prefixIcon: Icon(Icons.radar),
                     suffixText: 'nm',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   onChanged: (value) {
                     final parsed = double.tryParse(value.trim());
                     if (parsed != null && parsed > 0) {
@@ -205,7 +229,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   'GPS backup',
                   fleet.gpsPosition != null
                       ? '${fleet.gpsPosition!.latitude.toStringAsFixed(5)}, '
-                          '${fleet.gpsPosition!.longitude.toStringAsFixed(5)}'
+                            '${fleet.gpsPosition!.longitude.toStringAsFixed(5)}'
                       : 'Unavailable',
                 ),
               ],
@@ -214,7 +238,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           const SizedBox(height: 16),
           _SettingsSection(
             title: 'Appearance',
-            description: 'Switch between day, night, and red night layouts from one place.',
+            description:
+                'Switch between day, night, and red night layouts from one place.',
             child: SegmentedButton<AppThemeMode>(
               segments: AppThemeMode.values
                   .map(
@@ -235,9 +260,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           const SizedBox(height: 16),
           _SettingsSection(
             title: 'App',
-            description: 'The standard app details crews expect before a release.',
+            description:
+                'The standard app details crews expect before a release.',
             child: Column(
               children: [
+                _SettingsActionTile(
+                  icon: Icons.tour_outlined,
+                  title: 'Replay Help Tour',
+                  subtitle: 'Walk through the main dashboard features again',
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pop(AppSettingsScreen.replayTourResult),
+                ),
+                const Divider(height: 1),
                 _SettingsActionTile(
                   icon: Icons.info_outline,
                   title: 'About FleetFlow',
@@ -248,19 +283,19 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     summary:
                         'FleetFlow is a live race-day fleet viewer built for offshore sailing teams. '
                         'It focuses on fast situational awareness from AIS, NMEA, and device GPS.',
-                    sections: const [
-                      DocumentSection(
+                    sections: [
+                      const DocumentSection(
                         heading: 'What it does',
                         body:
                             'FleetFlow connects to a chartplotter or simulator harness over TCP, '
                             'parses incoming AIS and NMEA traffic, and renders the fleet on a live map with speed and course details.',
                       ),
-                      DocumentSection(
+                      const DocumentSection(
                         heading: 'Designed for race day',
                         body:
                             'Day, night, and red night themes are included so the same device can stay readable from bright daylight through overnight legs.',
                       ),
-                      DocumentSection(
+                      const DocumentSection(
                         heading: 'Safety notice',
                         body:
                             'FleetFlow supports situational awareness only. It is not a substitute for official navigation equipment, charts, watchstanding, or seamanship.',
@@ -276,7 +311,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 _SettingsActionTile(
                   icon: Icons.privacy_tip_outlined,
                   title: 'Privacy Policy',
-                  subtitle: 'How connection data, AIS data, and GPS data are handled',
+                  subtitle:
+                      'How connection data, AIS data, and GPS data are handled',
                   onTap: () => _openDocument(
                     context,
                     title: 'Privacy Policy',
@@ -310,7 +346,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 _SettingsActionTile(
                   icon: Icons.description_outlined,
                   title: 'Terms of Use',
-                  subtitle: 'Usage expectations, limitations, and operator responsibility',
+                  subtitle:
+                      'Usage expectations, limitations, and operator responsibility',
                   onTap: () => _openDocument(
                     context,
                     title: 'Terms of Use',
@@ -351,6 +388,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       applicationName: 'FleetFlow',
                       applicationVersion: _appVersionLabel,
                     );
+                  },
+                ),
+                const Divider(height: 1),
+                _SettingsActionTile(
+                  icon: Icons.play_circle_outline,
+                  title: 'Replay Help Tour',
+                  subtitle: 'Walk through the dashboard controls again',
+                  onTap: () {
+                    Navigator.of(
+                      context,
+                    ).pop(AppSettingsScreen.replayTourResult);
                   },
                 ),
               ],

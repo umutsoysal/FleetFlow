@@ -4,10 +4,7 @@ class DocumentSection {
   final String heading;
   final String body;
 
-  const DocumentSection({
-    required this.heading,
-    required this.body,
-  });
+  const DocumentSection({required this.heading, required this.body});
 }
 
 class LegalDocumentScreen extends StatelessWidget {
@@ -34,10 +31,7 @@ class LegalDocumentScreen extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(
-                summary,
-                style: theme.textTheme.bodyLarge,
-              ),
+              child: Text(summary, style: theme.textTheme.bodyLarge),
             ),
           ),
           const SizedBox(height: 16),

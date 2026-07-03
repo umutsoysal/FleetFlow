@@ -194,7 +194,9 @@ class _DataCell extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
