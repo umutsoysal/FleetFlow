@@ -38,4 +38,18 @@ void main() {
     expect(find.text('Pegasus'), findsWidgets);
     expect(find.text('J/111 · USA 1234'), findsWidgets);
   });
+
+  testWidgets('Settings includes a feedback email action', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'help_tour_seen': true});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(FleetFlowApp(prefs: prefs));
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Send Feedback'), findsOneWidget);
+    expect(find.text('Email feedback to the FleetFlow team'), findsOneWidget);
+  });
 }

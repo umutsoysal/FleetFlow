@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/fleet_manager.dart' hide ConnectionState;
 import '../models/fleet_manager.dart' as fm;
 import '../models/theme_provider.dart';
@@ -342,21 +343,24 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             title: 'Appearance',
             description:
                 'Switch between day, night, and red night layouts from one place.',
-            child: SegmentedButton<AppThemeMode>(
-              segments: AppThemeMode.values
-                  .map(
-                    (mode) => ButtonSegment<AppThemeMode>(
-                      value: mode,
-                      label: Text(mode.label),
-                      icon: Icon(mode.icon, size: 16),
-                    ),
-                  )
-                  .toList(),
-              selected: {themeProvider.mode},
-              onSelectionChanged: (selection) {
-                themeProvider.mode = selection.first;
-              },
-              multiSelectionEnabled: false,
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<AppThemeMode>(
+                segments: AppThemeMode.values
+                    .map(
+                      (mode) => ButtonSegment<AppThemeMode>(
+                        value: mode,
+                        label: Text(mode.label),
+                        icon: Icon(mode.icon, size: 16),
+                      ),
+                    )
+                    .toList(),
+                selected: {themeProvider.mode},
+                onSelectionChanged: (selection) {
+                  themeProvider.mode = selection.first;
+                },
+                multiSelectionEnabled: false,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -366,15 +370,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 'The standard app details crews expect before a release.',
             child: Column(
               children: [
-                _SettingsActionTile(
-                  icon: Icons.tour_outlined,
-                  title: 'Replay Help Tour',
-                  subtitle: 'Walk through the main dashboard features again',
-                  onTap: () => Navigator.of(
-                    context,
-                  ).pop(AppSettingsScreen.replayTourResult),
-                ),
-                const Divider(height: 1),
                 _SettingsActionTile(
                   icon: Icons.info_outline,
                   title: 'About FleetFlow',
@@ -408,6 +403,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       ),
                     ],
                   ),
+                ),
+                const Divider(height: 1),
+                _SettingsActionTile(
+                  icon: Icons.mail_outline,
+                  title: 'Send Feedback',
+                  subtitle: 'Email feedback to the FleetFlow team',
+                  onTap: () => _sendFeedbackEmail(context),
                 ),
                 const Divider(height: 1),
                 _SettingsActionTile(
@@ -527,6 +529,25 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       ),
     );
   }
+
+  Future<void> _sendFeedbackEmail(BuildContext context) async {
+    final feedbackEmail = Uri(
+      scheme: 'mailto',
+      path: 'usailfasttech@gmail.com',
+      queryParameters: const {
+        'subject': 'FleetFlow Feedback',
+      },
+    );
+
+    final launched = await launchUrl(feedbackEmail);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open your mail app right now.'),
+        ),
+      );
+    }
+  }
 }
 
 class _SettingsSection extends StatelessWidget {
@@ -581,7 +602,12 @@ class _SettingsInfoRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
@@ -721,34 +747,40 @@ class _OwnBoatPreview extends StatelessWidget {
         children: [
           Icon(Icons.navigation, color: color, size: 24),
           const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name.isEmpty ? 'Own Vessel' : name,
-                  style: TextStyle(
-                    color: foreground,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (profileLabel.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    profileLabel,
+                    name.isEmpty ? 'Own Vessel' : name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: foreground.withValues(alpha: 0.85),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (profileLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      profileLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: foreground.withValues(alpha: 0.85),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],
