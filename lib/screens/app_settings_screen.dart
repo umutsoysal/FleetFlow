@@ -534,9 +534,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     final feedbackEmail = Uri(
       scheme: 'mailto',
       path: 'usailfasttech@gmail.com',
-      queryParameters: const {
-        'subject': 'FleetFlow Feedback',
-      },
+      queryParameters: const {'subject': 'FleetFlow Feedback'},
     );
 
     final launched = await launchUrl(feedbackEmail);

@@ -49,6 +49,13 @@ void main() {
     await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Send Feedback'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     expect(find.text('Send Feedback'), findsOneWidget);
     expect(find.text('Email feedback to the FleetFlow team'), findsOneWidget);
   });
