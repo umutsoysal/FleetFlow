@@ -21,6 +21,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   late TextEditingController _portController;
   late TextEditingController _mmsiController;
   late TextEditingController _boatNameController;
+  late TextEditingController _boatCallSignController;
+  late TextEditingController _boatClassController;
   late TextEditingController _coverageController;
   String _appVersionLabel = '';
 
@@ -35,6 +37,12 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     );
     _boatNameController = TextEditingController(
       text: fleet.configuredOwnBoatName,
+    );
+    _boatCallSignController = TextEditingController(
+      text: fleet.configuredOwnBoatCallSign,
+    );
+    _boatClassController = TextEditingController(
+      text: fleet.configuredOwnBoatClass,
     );
     _coverageController = TextEditingController(
       text: fleet.coverageRadiusNm.toStringAsFixed(0),
@@ -54,6 +62,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _portController.dispose();
     _mmsiController.dispose();
     _boatNameController.dispose();
+    _boatCallSignController.dispose();
+    _boatClassController.dispose();
     _coverageController.dispose();
     super.dispose();
   }
@@ -159,7 +169,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           _SettingsSection(
             title: 'Own Vessel',
             description:
-                'Choose how your own boat is positioned and how far the coverage ring extends.',
+                'Set the identity, marker style, and source preferences for your boat.',
             child: Column(
               children: [
                 TextField(
@@ -168,13 +178,46 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     labelText: 'Boat name',
                     hintText: 'Pegasus',
                     helperText:
-                        'Used for your own-boat marker. Leave blank to fall back to AIS/default naming.',
+                        'Used for your own-boat marker and preview badge.',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.badge_outlined),
                   ),
                   textCapitalization: TextCapitalization.words,
                   onChanged: (value) {
                     context.read<FleetManager>().configuredOwnBoatName = value;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _boatCallSignController,
+                  decoration: const InputDecoration(
+                    labelText: 'Sail number / Call sign',
+                    hintText: 'USA 1234',
+                    helperText:
+                        'Optional secondary identifier shown in boat configuration.',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.pin_outlined),
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  onChanged: (value) {
+                    context.read<FleetManager>().configuredOwnBoatCallSign =
+                        value;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _boatClassController,
+                  decoration: const InputDecoration(
+                    labelText: 'Boat class',
+                    hintText: 'J/111',
+                    helperText:
+                        'Optional class or model for a little more context.',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.sailing_outlined),
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (value) {
+                    context.read<FleetManager>().configuredOwnBoatClass = value;
                   },
                 ),
                 const SizedBox(height: 16),
@@ -226,7 +269,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       .map(
                         (option) => _BoatColorChip(
                           option: option,
-                          selected: fleet.ownBoatColor.value == option.color.value,
+                          selected:
+                              fleet.ownBoatColor.value == option.color.value,
                           onTap: () {
                             fleet.ownBoatColor = option.color;
                           },
@@ -237,6 +281,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 const SizedBox(height: 16),
                 _OwnBoatPreview(
                   name: fleet.ownBoatDisplayName,
+                  profileLabel: fleet.ownBoatProfileLabel,
                   color: fleet.ownBoatColor,
                 ),
                 const SizedBox(height: 16),
@@ -274,6 +319,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                _SettingsInfoRow('Marker label', fleet.ownBoatDisplayName),
+                _SettingsInfoRow(
+                  'Boat profile',
+                  fleet.ownBoatProfileLabel.isEmpty
+                      ? 'Not set'
+                      : fleet.ownBoatProfileLabel,
+                ),
                 _SettingsInfoRow('Active source', fleet.ownPositionSource),
                 _SettingsInfoRow(
                   'GPS backup',
@@ -610,7 +662,9 @@ class _BoatColorChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? option.color.withValues(alpha: 0.16)
-              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+              : theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.45,
+                ),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected ? option.color : theme.dividerColor,
@@ -639,22 +693,28 @@ class _BoatColorChip extends StatelessWidget {
 
 class _OwnBoatPreview extends StatelessWidget {
   final String name;
+  final String profileLabel;
   final Color color;
 
   const _OwnBoatPreview({
     required this.name,
+    required this.profileLabel,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final foreground = color.computeLuminance() > 0.45 ? Colors.black : Colors.white;
+    final foreground = color.computeLuminance() > 0.45
+        ? Colors.black
+        : Colors.white;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -667,12 +727,28 @@ class _OwnBoatPreview extends StatelessWidget {
               color: color,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              name.isEmpty ? 'Own Vessel' : name,
-              style: TextStyle(
-                color: foreground,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name.isEmpty ? 'Own Vessel' : name,
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (profileLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    profileLabel,
+                    style: TextStyle(
+                      color: foreground.withValues(alpha: 0.85),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

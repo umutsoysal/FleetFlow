@@ -47,12 +47,16 @@ class FleetManager extends ChangeNotifier {
   static const _keyFleetMmsis = 'fleet_mmsis';
   static const _keyFleetOnly = 'fleet_only';
   static const _keyOwnBoatName = 'own_boat_name';
+  static const _keyOwnBoatCallSign = 'own_boat_call_sign';
+  static const _keyOwnBoatClass = 'own_boat_class';
   static const _keyOwnBoatColor = 'own_boat_color';
 
   static const defaultOwnBoatColor = Color(0xFF14B8A6);
 
   double _coverageRadiusNm = 20;
   String _ownBoatName = '';
+  String _ownBoatCallSign = '';
+  String _ownBoatClass = '';
   int _ownBoatColorValue = defaultOwnBoatColor.value;
 
   double get coverageRadiusNm => _coverageRadiusNm;
@@ -61,6 +65,7 @@ class FleetManager extends ChangeNotifier {
     notifyListeners();
     _saveSettings();
   }
+
   DateTime? lastMessageTime;
   int messageCount = 0;
 
@@ -127,19 +132,40 @@ class FleetManager extends ChangeNotifier {
   }
 
   /// Best available position: respects [useGpsForOwnBoat].
-  LatLng? get ownPosition => useGpsForOwnBoat ? _gpsPosition : (ownBoat?.position ?? _gpsPosition);
+  LatLng? get ownPosition =>
+      useGpsForOwnBoat ? _gpsPosition : (ownBoat?.position ?? _gpsPosition);
 
   /// Best available course: respects [useGpsForOwnBoat].
-  double get ownCourse => useGpsForOwnBoat ? _gpsCourse : (ownBoat?.courseOverGround ?? _gpsCourse);
+  double get ownCourse =>
+      useGpsForOwnBoat ? _gpsCourse : (ownBoat?.courseOverGround ?? _gpsCourse);
 
   /// Best available speed (knots): respects [useGpsForOwnBoat].
-  double get ownSpeed => useGpsForOwnBoat ? _gpsSpeed : (ownBoat?.speedOverGround ?? _gpsSpeed);
+  double get ownSpeed =>
+      useGpsForOwnBoat ? _gpsSpeed : (ownBoat?.speedOverGround ?? _gpsSpeed);
 
   String get configuredOwnBoatName => _ownBoatName;
   set configuredOwnBoatName(String value) {
     final trimmed = value.trim();
     if (_ownBoatName == trimmed) return;
     _ownBoatName = trimmed;
+    notifyListeners();
+    _saveSettings();
+  }
+
+  String get configuredOwnBoatCallSign => _ownBoatCallSign;
+  set configuredOwnBoatCallSign(String value) {
+    final trimmed = value.trim().toUpperCase();
+    if (_ownBoatCallSign == trimmed) return;
+    _ownBoatCallSign = trimmed;
+    notifyListeners();
+    _saveSettings();
+  }
+
+  String get configuredOwnBoatClass => _ownBoatClass;
+  set configuredOwnBoatClass(String value) {
+    final trimmed = value.trim();
+    if (_ownBoatClass == trimmed) return;
+    _ownBoatClass = trimmed;
     notifyListeners();
     _saveSettings();
   }
@@ -155,7 +181,18 @@ class FleetManager extends ChangeNotifier {
   /// Display name for the own-boat marker.
   String get ownBoatDisplayName {
     if (_ownBoatName.isNotEmpty) return _ownBoatName;
-    return useGpsForOwnBoat ? 'Own Vessel' : (ownBoat?.displayName ?? 'Own Vessel');
+    if (_ownBoatCallSign.isNotEmpty) return _ownBoatCallSign;
+    return useGpsForOwnBoat
+        ? 'Own Vessel'
+        : (ownBoat?.displayName ?? 'Own Vessel');
+  }
+
+  String get ownBoatProfileLabel {
+    final labels = <String>[
+      if (_ownBoatClass.isNotEmpty) _ownBoatClass,
+      if (_ownBoatCallSign.isNotEmpty) _ownBoatCallSign,
+    ];
+    return labels.join(' · ');
   }
 
   bool _useGpsForOwnBoat = false;
@@ -186,10 +223,14 @@ class FleetManager extends ChangeNotifier {
       _useGpsForOwnBoat = prefs.getBool(_keyGpsSource) ?? _useGpsForOwnBoat;
       _fleetOnly = prefs.getBool(_keyFleetOnly) ?? false;
       _ownBoatName = prefs.getString(_keyOwnBoatName) ?? '';
+      _ownBoatCallSign = prefs.getString(_keyOwnBoatCallSign) ?? '';
+      _ownBoatClass = prefs.getString(_keyOwnBoatClass) ?? '';
       _ownBoatColorValue = prefs.getInt(_keyOwnBoatColor) ?? _ownBoatColorValue;
       final savedMmsis = prefs.getStringList(_keyFleetMmsis);
       if (savedMmsis != null) {
-        _fleetMmsis.addAll(savedMmsis.map((s) => int.tryParse(s)).whereType<int>());
+        _fleetMmsis.addAll(
+          savedMmsis.map((s) => int.tryParse(s)).whereType<int>(),
+        );
       }
     }
     _startGpsTracking();
@@ -205,6 +246,8 @@ class FleetManager extends ChangeNotifier {
     await prefs.setBool(_keyGpsSource, _useGpsForOwnBoat);
     await prefs.setBool(_keyFleetOnly, _fleetOnly);
     await prefs.setString(_keyOwnBoatName, _ownBoatName);
+    await prefs.setString(_keyOwnBoatCallSign, _ownBoatCallSign);
+    await prefs.setString(_keyOwnBoatClass, _ownBoatClass);
     await prefs.setInt(_keyOwnBoatColor, _ownBoatColorValue);
     await prefs.setStringList(
       _keyFleetMmsis,
@@ -230,17 +273,18 @@ class FleetManager extends ChangeNotifier {
       return;
     }
 
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-        distanceFilter: 5,
-      ),
-    ).listen((pos) {
-      _gpsPosition = LatLng(pos.latitude, pos.longitude);
-      _gpsCourse = pos.heading;
-      _gpsSpeed = pos.speed * 1.94384; // m/s → knots
-      notifyListeners();
-    });
+    _positionSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+            distanceFilter: 5,
+          ),
+        ).listen((pos) {
+          _gpsPosition = LatLng(pos.latitude, pos.longitude);
+          _gpsCourse = pos.heading;
+          _gpsSpeed = pos.speed * 1.94384; // m/s → knots
+          notifyListeners();
+        });
   }
 
   ConnectionState get connectionState => _connectionState;
@@ -271,9 +315,7 @@ class FleetManager extends ChangeNotifier {
   double get fleetMaxSpeed {
     final active = activeBoats;
     if (active.isEmpty) return 0;
-    return active
-        .map((b) => b.speedOverGround)
-        .reduce((a, b) => a > b ? a : b);
+    return active.map((b) => b.speedOverGround).reduce((a, b) => a > b ? a : b);
   }
 
   void connect() {
