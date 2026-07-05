@@ -12,6 +12,7 @@ enum ConnectionState {
   disconnected,
   connecting,
   connected,
+  reconnecting,
   paused,
   error;
 
@@ -23,6 +24,8 @@ enum ConnectionState {
         return 'Connecting…';
       case connected:
         return 'Connected';
+      case reconnecting:
+        return 'Reconnecting…';
       case paused:
         return 'Paused';
       case error:
@@ -317,48 +320,89 @@ class FleetManager extends ChangeNotifier {
     return active.map((b) => b.speedOverGround).reduce((a, b) => a > b ? a : b);
   }
 
+  // ── Reconnect with backoff ───────────────────────────────────────────────
+  // Boat Wi-Fi drops constantly; keep retrying (2s, 4s, 8s… capped at 30s)
+  // until the user explicitly stops scanning or we exhaust the attempts.
+  static const maxReconnectAttempts = 10;
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  bool _shouldReconnect = false;
+
+  int get reconnectAttempts => _reconnectAttempts;
+
   void connect() {
     disconnect();
     _saveSettings();
+    _shouldReconnect = true;
+    _reconnectAttempts = 0;
     _connectionState = ConnectionState.connecting;
     notifyListeners();
+    _openConnection();
+  }
 
+  void _openConnection() {
     _connection = NMEAConnection(
       host: host,
       port: port,
       onData: _handleLine,
       onConnected: () {
+        _reconnectAttempts = 0;
         _connectionState = ConnectionState.connected;
         notifyListeners();
       },
-      onError: (msg) {
-        _connectionState = ConnectionState.error;
-        _errorMessage = msg;
-        notifyListeners();
-      },
-      onDisconnected: () {
-        _connectionState = ConnectionState.disconnected;
-        notifyListeners();
-      },
+      onError: _handleConnectionLost,
+      onDisconnected: () => _handleConnectionLost('Connection closed'),
     );
     _connection!.connect();
   }
 
-  void disconnect() {
+  void _handleConnectionLost(String message) {
     _connection?.disconnect();
     _connection = null;
-    _connectionState = ConnectionState.disconnected;
+
+    if (!_shouldReconnect) {
+      _connectionState = ConnectionState.disconnected;
+      notifyListeners();
+      return;
+    }
+    // A socket error is often followed by its onDone; don't double-schedule.
+    if (_reconnectTimer?.isActive ?? false) return;
+
+    if (_reconnectAttempts >= maxReconnectAttempts) {
+      _shouldReconnect = false;
+      _connectionState = ConnectionState.error;
+      _errorMessage =
+          '$message — gave up after $maxReconnectAttempts attempts';
+      notifyListeners();
+      return;
+    }
+
+    _reconnectAttempts++;
+    _errorMessage = message;
+    _connectionState = ConnectionState.reconnecting;
+    notifyListeners();
+
+    final delaySeconds = (1 << _reconnectAttempts).clamp(2, 30);
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (_shouldReconnect) _openConnection();
+    });
+  }
+
+  void _stopConnection(ConnectionState endState) {
+    _shouldReconnect = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _connection?.disconnect();
+    _connection = null;
+    _connectionState = endState;
     notifyListeners();
   }
 
+  void disconnect() => _stopConnection(ConnectionState.disconnected);
+
   /// Pause listening: closes the socket so no data is consumed, but keeps
   /// the tracked boats and presents as resumable rather than disconnected.
-  void pause() {
-    _connection?.disconnect();
-    _connection = null;
-    _connectionState = ConnectionState.paused;
-    notifyListeners();
-  }
+  void pause() => _stopConnection(ConnectionState.paused);
 
   void _handleLine(String line) {
     final sentences = _parser.parse(line);
@@ -366,14 +410,13 @@ class FleetManager extends ChangeNotifier {
       messageCount++;
       lastMessageTime = DateTime.now();
 
-      final result = _aisDecoder.decode(sentence);
-      if (result == null) continue;
-
-      switch (result) {
-        case AISPositionReport():
-          _updateBoatPosition(result);
-        case AISStaticData():
-          _updateBoatStatic(result);
+      for (final result in _aisDecoder.decode(sentence)) {
+        switch (result) {
+          case AISPositionReport():
+            _updateBoatPosition(result);
+          case AISStaticData():
+            _updateBoatStatic(result);
+        }
       }
     }
     notifyListeners();
@@ -389,20 +432,32 @@ class FleetManager extends ChangeNotifier {
     );
 
     boat.position = LatLng(report.latitude, report.longitude);
-    boat.speedOverGround = report.sog;
-    boat.courseOverGround = report.cog;
-    boat.trueHeading = report.heading;
-    boat.navigationStatus = NavigationStatus.fromAIS(report.navStatus);
+    // Null fields mean "not available" on the wire; keep the last known value
+    // rather than polluting stats with sentinel readings.
+    final sog = report.sog;
+    if (sog != null) {
+      boat.speedOverGround = sog;
+      boat.addSpeedSample(sog);
+    }
+    if (report.cog != null) boat.courseOverGround = report.cog!;
+    final heading = report.heading ?? report.cog;
+    if (heading != null) boat.trueHeading = heading;
+    if (report.navStatus != null) {
+      boat.navigationStatus = NavigationStatus.fromAIS(report.navStatus!);
+    }
     boat.lastUpdate = DateTime.now();
-    boat.addSpeedSample(report.sog);
   }
 
   void _updateBoatStatic(AISStaticData data) {
     final boat = _boats[data.mmsi];
     if (boat == null) return;
-    boat.name = data.name.trim();
-    boat.callSign = data.callSign.trim();
-    boat.shipType = ShipType.fromAIS(data.shipType);
+    final name = data.name?.trim();
+    if (name != null && name.isNotEmpty) boat.name = name;
+    final callSign = data.callSign?.trim();
+    if (callSign != null && callSign.isNotEmpty) boat.callSign = callSign;
+    if (data.shipType != null) {
+      boat.shipType = ShipType.fromAIS(data.shipType!);
+    }
   }
 
   @override

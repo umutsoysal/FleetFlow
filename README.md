@@ -6,7 +6,8 @@ An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or
 
 ## Features
 
-- **Live AIS decoding** — parses NMEA 0183 `!AIVDM`/`!AIVDO` sentences (message types 1, 2, 3, and 5) to extract position, SOG, COG, heading, navigation status, vessel name, and call sign
+- **Live AIS decoding** — parses NMEA 0183 `!AIVDM`/`!AIVDO` sentences for both Class A (types 1, 2, 3, 5) and Class B (types 18, 19, 24) transponders to extract position, SOG, COG, heading, navigation status, vessel name, and call sign; "not available" sentinel values are filtered out rather than shown as bogus readings
+- **Auto-reconnect** — dropped TCP connections retry automatically with exponential backoff (2s–30s, up to 10 attempts), so a flaky boat Wi-Fi doesn't silently stop the feed mid-race
 - **Interactive dark chart** — OpenStreetMap tiles rendered with a nautical dark filter; map auto-fits to the fleet on first fix
 - **Fleet summary bar** — at-a-glance fleet count, average speed, and max speed across all active boats
 - **Boat roster** — scrollable card list showing each vessel's name/MMSI, speed, course, heading, call sign, and navigation status; stale contacts (>5 min) are visually dimmed
@@ -27,7 +28,7 @@ lib/
 ├── networking/
 │   ├── nmea_connection.dart         # Raw TCP socket → line-buffered ASCII stream
 │   ├── nmea_parser.dart             # Tokenises NMEA sentences and validates checksums
-│   └── ais_decoder.dart             # Bit-level AIS payload decoder (msg 1/2/3 + msg 5)
+│   └── ais_decoder.dart             # Bit-level AIS payload decoder (Class A 1/2/3/5, Class B 18/19/24)
 ├── screens/
 │   ├── dashboard_screen.dart        # Main scaffold with AppBar, summary bar, map, and table
 │   ├── app_settings_screen.dart     # Full settings experience: connection, vessel, appearance, legal

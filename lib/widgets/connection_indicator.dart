@@ -15,6 +15,7 @@ class ConnectionIndicator extends StatelessWidget {
       case fm.ConnectionState.connected:
         dotColor = Colors.green;
       case fm.ConnectionState.connecting:
+      case fm.ConnectionState.reconnecting:
         dotColor = Colors.orange;
       case fm.ConnectionState.paused:
         dotColor = Colors.amber;

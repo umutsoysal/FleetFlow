@@ -36,7 +36,8 @@ class _ScanButtonBarState extends State<ScanButtonBar>
     final state = fleet.connectionState;
 
     final scanning = state == fm.ConnectionState.connected;
-    final connecting = state == fm.ConnectionState.connecting;
+    final connecting = state == fm.ConnectionState.connecting ||
+        state == fm.ConnectionState.reconnecting;
     final paused = state == fm.ConnectionState.paused;
 
     if (scanning && !_pulse.isAnimating) {
@@ -179,6 +180,9 @@ class _ScanButtonBarState extends State<ScanButtonBar>
             '${fleet.messageCount} messages';
       case fm.ConnectionState.connecting:
         return 'Connecting to ${fleet.host}:${fleet.port}…';
+      case fm.ConnectionState.reconnecting:
+        return 'Connection lost — retrying '
+            '(${fleet.reconnectAttempts}/${FleetManager.maxReconnectAttempts})…';
       case fm.ConnectionState.paused:
         return 'Paused — ${fleet.messageCount} messages so far, '
             'tap to resume';

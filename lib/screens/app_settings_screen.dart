@@ -113,7 +113,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       child: OutlinedButton.icon(
                         onPressed:
                             fleet.connectionState ==
-                                fm.ConnectionState.connected
+                                    fm.ConnectionState.connected ||
+                                fleet.connectionState ==
+                                    fm.ConnectionState.reconnecting
                             ? fleet.disconnect
                             : null,
                         icon: const Icon(Icons.link_off),

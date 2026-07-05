@@ -4,12 +4,20 @@ sealed class AISResult {}
 
 class AISPositionReport extends AISResult {
   final int mmsi;
-  final int navStatus;
-  final double sog;
+
+  /// Null for Class B reports, which carry no navigation status.
+  final int? navStatus;
+
+  /// Knots; null when the transponder reports "not available" (raw 1023).
+  final double? sog;
   final double longitude;
   final double latitude;
-  final double cog;
-  final double heading;
+
+  /// Degrees; null when the transponder reports "not available" (raw 3600).
+  final double? cog;
+
+  /// Degrees; null when the transponder reports "not available" (raw 511).
+  final double? heading;
   final int timestamp;
 
   AISPositionReport({
@@ -26,26 +34,32 @@ class AISPositionReport extends AISResult {
 
 class AISStaticData extends AISResult {
   final int mmsi;
-  final String name;
-  final String callSign;
-  final int shipType;
+
+  /// Null when this message type doesn't carry the field (e.g. type 24 part B
+  /// has no name, part A has no call sign or ship type).
+  final String? name;
+  final String? callSign;
+  final int? shipType;
 
   AISStaticData({
     required this.mmsi,
-    required this.name,
-    required this.callSign,
-    required this.shipType,
+    this.name,
+    this.callSign,
+    this.shipType,
   });
 }
 
 class AISDecoder {
-  AISResult? decode(NMEASentence sentence) {
-    if (sentence.type != 'VDM' && sentence.type != 'VDO') return null;
-    if (sentence.fields.isEmpty) return null;
+  /// Decodes one reassembled AIS sentence. Returns an empty list for
+  /// unsupported or malformed messages; type 19 can yield both a position
+  /// report and static data.
+  List<AISResult> decode(NMEASentence sentence) {
+    if (sentence.type != 'VDM' && sentence.type != 'VDO') return [];
+    if (sentence.fields.isEmpty) return [];
 
     final payload = sentence.fields[0];
     final bits = _decodeToBits(payload);
-    if (bits.length < 6) return null;
+    if (bits.length < 6) return [];
 
     final messageType = _bitsToUInt(bits, 0, 6);
 
@@ -53,36 +67,98 @@ class AISDecoder {
       case 1:
       case 2:
       case 3:
-        return _decodePositionReport(bits);
+        return _wrap(_decodeClassAPosition(bits));
       case 5:
-        return _decodeStaticData(bits);
+        return _wrap(_decodeClassAStatic(bits));
+      case 18:
+        return _wrap(_decodeClassBPosition(bits, minBits: 168));
+      case 19:
+        return _decodeExtendedClassB(bits);
+      case 24:
+        return _wrap(_decodeClassBStatic(bits));
       default:
-        return null;
+        return [];
     }
   }
 
-  AISPositionReport? _decodePositionReport(List<int> bits) {
+  List<AISResult> _wrap(AISResult? result) => result == null ? [] : [result];
+
+  // Message types 1/2/3: Class A position report.
+  AISPositionReport? _decodeClassAPosition(List<int> bits) {
     if (bits.length < 168) return null;
 
-    final mmsi = _bitsToUInt(bits, 8, 30);
-    final navStatus = _bitsToUInt(bits, 38, 4);
-    final rawSOG = _bitsToUInt(bits, 50, 10);
-    final sog = rawSOG / 10.0;
+    return _positionReport(
+      bits,
+      mmsi: _bitsToUInt(bits, 8, 30),
+      navStatus: _bitsToUInt(bits, 38, 4),
+      sogStart: 50,
+      lonStart: 61,
+      latStart: 89,
+      cogStart: 116,
+      headingStart: 128,
+      timestampStart: 137,
+    );
+  }
 
-    final rawLon = _bitsToSInt(bits, 61, 28);
-    final longitude = rawLon / 600000.0;
+  // Message type 18: Class B position report — what most racing sailboats
+  // (and the Cortex itself) transmit.
+  AISPositionReport? _decodeClassBPosition(List<int> bits,
+      {required int minBits}) {
+    if (bits.length < minBits) return null;
 
-    final rawLat = _bitsToSInt(bits, 89, 27);
-    final latitude = rawLat / 600000.0;
+    return _positionReport(
+      bits,
+      mmsi: _bitsToUInt(bits, 8, 30),
+      navStatus: null, // Class B has no navigation status field
+      sogStart: 46,
+      lonStart: 57,
+      latStart: 85,
+      cogStart: 112,
+      headingStart: 124,
+      timestampStart: 133,
+    );
+  }
 
-    final rawCOG = _bitsToUInt(bits, 116, 12);
-    final cog = rawCOG / 10.0;
+  // Message type 19: extended Class B — position plus name and ship type.
+  List<AISResult> _decodeExtendedClassB(List<int> bits) {
+    if (bits.length < 312) return [];
 
-    final rawHeading = _bitsToUInt(bits, 128, 9);
-    final heading = rawHeading == 511 ? cog : rawHeading.toDouble();
+    final results = <AISResult>[];
+    final position = _decodeClassBPosition(bits, minBits: 312);
+    if (position != null) results.add(position);
 
-    final timestamp = _bitsToUInt(bits, 137, 6);
+    results.add(AISStaticData(
+      mmsi: _bitsToUInt(bits, 8, 30),
+      name: _bitsToString(bits, 143, 120),
+      shipType: _bitsToUInt(bits, 263, 8),
+    ));
+    return results;
+  }
 
+  AISPositionReport? _positionReport(
+    List<int> bits, {
+    required int mmsi,
+    required int? navStatus,
+    required int sogStart,
+    required int lonStart,
+    required int latStart,
+    required int cogStart,
+    required int headingStart,
+    required int timestampStart,
+  }) {
+    final rawSOG = _bitsToUInt(bits, sogStart, 10);
+    final sog = rawSOG == 1023 ? null : rawSOG / 10.0;
+
+    final longitude = _bitsToSInt(bits, lonStart, 28) / 600000.0;
+    final latitude = _bitsToSInt(bits, latStart, 27) / 600000.0;
+
+    final rawCOG = _bitsToUInt(bits, cogStart, 12);
+    final cog = rawCOG >= 3600 ? null : rawCOG / 10.0;
+
+    final rawHeading = _bitsToUInt(bits, headingStart, 9);
+    final heading = rawHeading == 511 ? null : rawHeading.toDouble();
+
+    // 181°/91° are the "position not available" sentinels.
     if (longitude < -180 || longitude > 180 || latitude < -90 || latitude > 90) {
       return null;
     }
@@ -95,24 +171,46 @@ class AISDecoder {
       latitude: latitude,
       cog: cog,
       heading: heading,
-      timestamp: timestamp,
+      timestamp: _bitsToUInt(bits, timestampStart, 6),
     );
   }
 
-  AISStaticData? _decodeStaticData(List<int> bits) {
+  // Message type 5: Class A static and voyage data.
+  AISStaticData? _decodeClassAStatic(List<int> bits) {
     if (bits.length < 424) return null;
 
-    final mmsi = _bitsToUInt(bits, 8, 30);
-    final callSign = _bitsToString(bits, 70, 42);
-    final name = _bitsToString(bits, 112, 120);
-    final shipType = _bitsToUInt(bits, 232, 8);
-
     return AISStaticData(
-      mmsi: mmsi,
-      name: name,
-      callSign: callSign,
-      shipType: shipType,
+      mmsi: _bitsToUInt(bits, 8, 30),
+      name: _bitsToString(bits, 112, 120),
+      callSign: _bitsToString(bits, 70, 42),
+      shipType: _bitsToUInt(bits, 232, 8),
     );
+  }
+
+  // Message type 24: Class B static data. Part A carries the name,
+  // part B carries call sign and ship type.
+  AISStaticData? _decodeClassBStatic(List<int> bits) {
+    if (bits.length < 160) return null;
+
+    final mmsi = _bitsToUInt(bits, 8, 30);
+    final partNumber = _bitsToUInt(bits, 38, 2);
+
+    switch (partNumber) {
+      case 0:
+        return AISStaticData(
+          mmsi: mmsi,
+          name: _bitsToString(bits, 40, 120),
+        );
+      case 1:
+        if (bits.length < 132) return null;
+        return AISStaticData(
+          mmsi: mmsi,
+          callSign: _bitsToString(bits, 90, 42),
+          shipType: _bitsToUInt(bits, 40, 8),
+        );
+      default:
+        return null;
+    }
   }
 
   List<int> _decodeToBits(String payload) {
