@@ -7,6 +7,12 @@
 
 An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or **Cortex** chartplotter over TCP and decodes live AIS/NMEA data to display your entire fleet on an interactive map with real-time speed and position telemetry.
 
+## Downloads
+
+- Android release APKs are attached to [GitHub Releases](https://github.com/umutsoysal/FleetFlow/releases).
+- `marine_ais` is published on [pub.dev/packages/marine_ais](https://pub.dev/packages/marine_ais).
+- iOS distribution is best handled through TestFlight rather than direct GitHub downloads.
+
 ## Screenshots
 
 <p align="center">
@@ -68,7 +74,8 @@ State is managed with a single `FleetManager` (`ChangeNotifier`) provided at the
 
 | Tool | Version |
 |------|---------|
-| Flutter | ≥ 3.x (Dart SDK `^3.11.0`) |
+| Flutter | 3.41.1 stable |
+| Dart | 3.11.0 |
 | Xcode | ≥ 15 (iOS target) |
 | Android Studio / SDK | API 21+ (Android target) |
 

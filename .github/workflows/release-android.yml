@@ -1,0 +1,116 @@
+name: Release Android APK
+
+on:
+  push:
+    tags:
+      - 'fleetflow-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    name: Build and attach Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate tag matches app version
+        id: version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          marketing_version="${version%%+*}"
+          expected_tag="fleetflow-v${marketing_version}"
+          if [ "${GITHUB_REF_NAME}" != "${expected_tag}" ]; then
+            echo "Expected tag ${expected_tag}, got ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "marketing_version=${marketing_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Resolve app version for manual runs
+        id: manual_version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          version=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          marketing_version="${version%%+*}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "marketing_version=${marketing_version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Ensure Android signing secrets exist
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "${ANDROID_KEYSTORE_BASE64}" || (echo "Missing ANDROID_KEYSTORE_BASE64" && exit 1)
+          test -n "${ANDROID_KEYSTORE_PASSWORD}" || (echo "Missing ANDROID_KEYSTORE_PASSWORD" && exit 1)
+          test -n "${ANDROID_KEY_ALIAS}" || (echo "Missing ANDROID_KEY_ALIAS" && exit 1)
+          test -n "${ANDROID_KEY_PASSWORD}" || (echo "Missing ANDROID_KEY_PASSWORD" && exit 1)
+
+      - name: Decode Android keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "${RUNNER_TEMP}/fleetflow-upload-keystore.jks"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build signed Android APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/fleetflow-upload-keystore.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: flutter build apk --release
+
+      - name: Rename release artifact
+        id: artifact
+        run: |
+          version="${{ steps.version.outputs.version || steps.manual_version.outputs.version }}"
+          asset_name="FleetFlow-android-${version}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "${asset_name}"
+          echo "asset_name=${asset_name}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create GitHub release for tag
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || \
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "FleetFlow ${{ steps.version.outputs.marketing_version }}" \
+            --notes "Android release for FleetFlow ${{ steps.version.outputs.version }}."
+
+      - name: Upload APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" "${{ steps.artifact.outputs.asset_name }}" --clobber
+
+      - name: Upload APK as workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.asset_name }}
+          path: ${{ steps.artifact.outputs.asset_name }}
