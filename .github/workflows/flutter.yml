@@ -31,11 +31,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze project source
-        run: flutter analyze
+      - name: Install marine_ais dependencies
+        working-directory: packages/marine_ais
+        run: dart pub get
 
-      - name: Run tests
+      - name: Analyze FleetFlow app
+        run: flutter analyze lib test
+
+      - name: Analyze marine_ais package
+        working-directory: packages/marine_ais
+        run: dart analyze
+
+      - name: Run FleetFlow tests
         run: flutter test
+
+      - name: Run marine_ais tests
+        working-directory: packages/marine_ais
+        run: dart test
 
       - name: Build web app
         run: flutter build web --release
