@@ -1,5 +1,10 @@
 # FleetFlow
 
+[![Flutter CI](https://github.com/umutsoysal/FleetFlow/actions/workflows/flutter.yml/badge.svg)](https://github.com/umutsoysal/FleetFlow/actions/workflows/flutter.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/umutsoysal/FleetFlow?display_name=tag)](https://github.com/umutsoysal/FleetFlow/releases)
+[![marine_ais on pub.dev](https://img.shields.io/pub/v/marine_ais?label=marine_ais)](https://pub.dev/packages/marine_ais)
+[![Built with Flutter](https://img.shields.io/badge/Built%20with-Flutter-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+
 An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or **Cortex** chartplotter over TCP and decodes live AIS/NMEA data to display your entire fleet on an interactive map with real-time speed and position telemetry.
 
 ## Screenshots
