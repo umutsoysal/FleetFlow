@@ -1,4 +1,4 @@
-import 'package:dart_ais/dart_ais.dart';
+import 'package:marine_ais/marine_ais.dart';
 
 void main() {
   final codec = AisMessageCodec();

@@ -1,15 +1,15 @@
-# dart_ais
+# marine_ais
 
 Pure Dart AIS decoding for `AIVDM` and `AIVDO` NMEA 0183 sentences.
 
-`dart_ais` validates NMEA checksums, reassembles multipart AIS payloads, and
+`marine_ais` validates NMEA checksums, reassembles multipart AIS payloads, and
 decodes common position and static-data message types into typed Dart models.
 
 ## Install
 
 ```yaml
 dependencies:
-  dart_ais: ^0.1.0
+  marine_ais: ^0.1.0
 ```
 
 ## Features
@@ -33,7 +33,7 @@ Unsupported or malformed AIS messages decode to an empty result list.
 ## Usage
 
 ```dart
-import 'package:dart_ais/dart_ais.dart';
+import 'package:marine_ais/marine_ais.dart';
 
 void main() {
   final codec = AisMessageCodec();
@@ -50,7 +50,7 @@ void main() {
 Or use the parser and decoder separately:
 
 ```dart
-import 'package:dart_ais/dart_ais.dart';
+import 'package:marine_ais/marine_ais.dart';
 
 void main() {
   final parser = NmeaParser();

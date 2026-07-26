@@ -1,2 +1,2 @@
-export 'package:dart_ais/dart_ais.dart'
+export 'package:marine_ais/marine_ais.dart'
     show AisResult, AisPositionReport, AisStaticData, AisDecoder;

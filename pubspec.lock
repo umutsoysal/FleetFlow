@@ -57,13 +57,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.9"
-  dart_ais:
-    dependency: "direct main"
-    description:
-      path: "packages/dart_ais"
-      relative: true
-    source: path
-    version: "0.1.0"
   dart_earcut:
     dependency: transitive
     description:
@@ -271,6 +264,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.7.0"
+  marine_ais:
+    dependency: "direct main"
+    description:
+      path: "packages/marine_ais"
+      relative: true
+    source: path
+    version: "0.1.0"
   matcher:
     dependency: transitive
     description:

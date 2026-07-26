@@ -18,8 +18,8 @@ dependencies:
   shared_preferences: ^2.3.0
   package_info_plus: ^10.2.0
   url_launcher: ^6.3.1
-  dart_ais:
-    path: packages/dart_ais
+  marine_ais:
+    path: packages/marine_ais
 
 dev_dependencies:
   flutter_test:

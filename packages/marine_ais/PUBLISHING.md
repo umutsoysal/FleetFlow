@@ -1,16 +1,16 @@
 # Publishing Checklist
 
-Use this checklist when `dart_ais` is ready to go live on `pub.dev`.
+Use this checklist when `marine_ais` is ready to go live on `pub.dev`.
 
 ## Final Metadata
 
-1. Confirm the public package name `dart_ais` is still the one you want.
+1. Confirm the public package name `marine_ais` is still the one you want.
 2. Add `repository`, `homepage`, and `issue_tracker` fields to `pubspec.yaml` once the public repository URL is final.
 3. Bump the version in `pubspec.yaml` and add release notes to `CHANGELOG.md`.
 
 ## Local Validation
 
-Run these commands from `packages/dart_ais`:
+Run these commands from `packages/marine_ais`:
 
 ```bash
 dart pub get
