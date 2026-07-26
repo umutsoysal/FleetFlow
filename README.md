@@ -2,6 +2,19 @@
 
 An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or **Cortex** chartplotter over TCP and decodes live AIS/NMEA data to display your entire fleet on an interactive map with real-time speed and position telemetry.
 
+## Screenshots
+
+<p align="center">
+  <img src="screnshots/README.png" alt="FleetFlow app overview on iPhone" width="30%" />
+  <img src="screnshots/Simulator%20Screenshot%20-%20iPad%20Air%2013-inch%20(M3)%20-%202026-07-04%20at%2018.09.53.png" alt="FleetFlow live fleet dashboard on iPad" width="66%" />
+</p>
+
+<p align="center">
+  <img src="screnshots/Simulator%20Screenshot%20-%20iPhone%2017%20Pro%20Max%20-%202026-07-04%20at%2011.29.04.png" alt="FleetFlow fleet manager screen on iPhone" width="30%" />
+</p>
+
+FleetFlow gives skippers and race crews a live fleet dashboard, an at-a-glance speed summary, and a dedicated fleet manager for curating the boats that matter during a race.
+
 ---
 
 ## Features
