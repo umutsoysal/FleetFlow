@@ -75,21 +75,26 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build signed Android APK
+      - name: Build signed Android artifacts
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/fleetflow-upload-keystore.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
 
-      - name: Rename release artifact
+      - name: Rename release artifacts
         id: artifact
         run: |
           version="${{ steps.version.outputs.version || steps.manual_version.outputs.version }}"
-          asset_name="FleetFlow-android-${version}.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "${asset_name}"
-          echo "asset_name=${asset_name}" >> "${GITHUB_OUTPUT}"
+          apk_asset_name="FleetFlow-android-${version}.apk"
+          aab_asset_name="FleetFlow-android-${version}.aab"
+          cp build/app/outputs/flutter-apk/app-release.apk "${apk_asset_name}"
+          cp build/app/outputs/bundle/release/app-release.aab "${aab_asset_name}"
+          echo "apk_asset_name=${apk_asset_name}" >> "${GITHUB_OUTPUT}"
+          echo "aab_asset_name=${aab_asset_name}" >> "${GITHUB_OUTPUT}"
 
       - name: Create GitHub release for tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -101,16 +106,22 @@ jobs:
             --title "FleetFlow ${{ steps.version.outputs.marketing_version }}" \
             --notes "Android release for FleetFlow ${{ steps.version.outputs.version }}."
 
-      - name: Upload APK to GitHub Release
+      - name: Upload Android artifacts to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${GITHUB_REF_NAME}" "${{ steps.artifact.outputs.asset_name }}" --clobber
+          gh release upload \
+            "${GITHUB_REF_NAME}" \
+            "${{ steps.artifact.outputs.apk_asset_name }}" \
+            "${{ steps.artifact.outputs.aab_asset_name }}" \
+            --clobber
 
-      - name: Upload APK as workflow artifact
+      - name: Upload Android artifacts as workflow artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.artifact.outputs.asset_name }}
-          path: ${{ steps.artifact.outputs.asset_name }}
+          name: FleetFlow-android-${{ steps.manual_version.outputs.version }}
+          path: |
+            ${{ steps.artifact.outputs.apk_asset_name }}
+            ${{ steps.artifact.outputs.aab_asset_name }}

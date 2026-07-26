@@ -1,6 +1,7 @@
 # FleetFlow
 
 [![Flutter CI](https://github.com/umutsoysal/FleetFlow/actions/workflows/flutter.yml/badge.svg)](https://github.com/umutsoysal/FleetFlow/actions/workflows/flutter.yml)
+[![Android Release](https://github.com/umutsoysal/FleetFlow/actions/workflows/release-android.yml/badge.svg)](https://github.com/umutsoysal/FleetFlow/actions/workflows/release-android.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/umutsoysal/FleetFlow?display_name=tag)](https://github.com/umutsoysal/FleetFlow/releases)
 [![marine_ais on pub.dev](https://img.shields.io/pub/v/marine_ais?label=marine_ais)](https://pub.dev/packages/marine_ais)
 [![Built with Flutter](https://img.shields.io/badge/Built%20with-Flutter-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
@@ -9,7 +10,8 @@ An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or
 
 ## Downloads
 
-- Android release APKs are attached to [GitHub Releases](https://github.com/umutsoysal/FleetFlow/releases).
+- Download the latest `FleetFlow-android-<version>.apk` from [GitHub Releases](https://github.com/umutsoysal/FleetFlow/releases) for direct Android installation.
+- `FleetFlow-android-<version>.aab` is also attached to each release for Play Store style distribution workflows.
 - `marine_ais` is published on [pub.dev/packages/marine_ais](https://pub.dev/packages/marine_ais).
 - iOS distribution is best handled through TestFlight rather than direct GitHub downloads.
 
