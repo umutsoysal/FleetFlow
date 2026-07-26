@@ -59,7 +59,7 @@ class FleetManager extends ChangeNotifier {
   String _ownBoatName = '';
   String _ownBoatCallSign = '';
   String _ownBoatClass = '';
-  int _ownBoatColorValue = defaultOwnBoatColor.value;
+  int _ownBoatColorValue = defaultOwnBoatColor.toARGB32();
 
   double get coverageRadiusNm => _coverageRadiusNm;
   set coverageRadiusNm(double v) {
@@ -174,8 +174,9 @@ class FleetManager extends ChangeNotifier {
 
   Color get ownBoatColor => Color(_ownBoatColorValue);
   set ownBoatColor(Color value) {
-    if (_ownBoatColorValue == value.value) return;
-    _ownBoatColorValue = value.value;
+    final argbValue = value.toARGB32();
+    if (_ownBoatColorValue == argbValue) return;
+    _ownBoatColorValue = argbValue;
     notifyListeners();
     _saveSettings();
   }

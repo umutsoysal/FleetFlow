@@ -273,7 +273,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                         (option) => _BoatColorChip(
                           option: option,
                           selected:
-                              fleet.ownBoatColor.value == option.color.value,
+                              fleet.ownBoatColor.toARGB32() ==
+                              option.color.toARGB32(),
                           onTap: () {
                             fleet.ownBoatColor = option.color;
                           },
