@@ -1,9 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:fleet_flow/networking/ais_decoder.dart';
-import 'package:fleet_flow/networking/nmea_parser.dart';
+import 'package:dart_ais/dart_ais.dart';
+import 'package:test/test.dart';
 
-/// Builds AIS payloads bit-by-bit so tests can round-trip real AIVDM
-/// sentences through the parser and decoder.
 class BitWriter {
   final List<int> bits = [];
 
@@ -15,11 +12,10 @@ class BitWriter {
 
   void sint(int value, int length) => uint(value & ((1 << length) - 1), length);
 
-  /// AIS 6-bit string: '@' (terminator) = 0, 'A'–'_' = 1–31, ' '–'?' = 32–63.
   void str(String s, int length) {
     final charCount = length ~/ 6;
     for (var i = 0; i < charCount; i++) {
-      final c = i < s.length ? s.codeUnitAt(i) : 64; // pad with '@'
+      final c = i < s.length ? s.codeUnitAt(i) : 64;
       uint(c >= 64 ? c - 64 : c, 6);
     }
   }
@@ -66,18 +62,18 @@ List<int> buildType1({
   int headingRaw = 226,
 }) {
   final w = BitWriter();
-  w.uint(1, 6); // message type
-  w.uint(0, 2); // repeat
+  w.uint(1, 6);
+  w.uint(0, 2);
   w.uint(mmsi, 30);
   w.uint(navStatus, 4);
-  w.uint(0, 8); // rate of turn
+  w.uint(0, 8);
   w.uint(sogRaw, 10);
-  w.uint(0, 1); // accuracy
+  w.uint(0, 1);
   w.sint((lon * 600000).round(), 28);
   w.sint((lat * 600000).round(), 27);
   w.uint(cogRaw, 12);
   w.uint(headingRaw, 9);
-  w.uint(33, 6); // timestamp
+  w.uint(33, 6);
   w.pad(168);
   return w.bits;
 }
@@ -91,17 +87,17 @@ List<int> buildType18({
   int headingRaw = 45,
 }) {
   final w = BitWriter();
-  w.uint(18, 6); // message type
-  w.uint(0, 2); // repeat
+  w.uint(18, 6);
+  w.uint(0, 2);
   w.uint(mmsi, 30);
-  w.uint(0, 8); // reserved
+  w.uint(0, 8);
   w.uint(sogRaw, 10);
-  w.uint(0, 1); // accuracy
+  w.uint(0, 1);
   w.sint((lon * 600000).round(), 28);
   w.sint((lat * 600000).round(), 27);
   w.uint(cogRaw, 12);
   w.uint(headingRaw, 9);
-  w.uint(33, 6); // timestamp
+  w.uint(33, 6);
   w.pad(168);
   return w.bits;
 }
@@ -132,7 +128,7 @@ void main() {
       expect(report.timestamp, 33);
     });
 
-    test('rejects the "position not available" sentinel (181°/91°)', () {
+    test('rejects the position not available sentinel', () {
       final results = decodeBits(buildType1(mmsi: 1, lon: 181, lat: 91));
       expect(results, isEmpty);
     });
@@ -153,7 +149,7 @@ void main() {
       expect(report.heading, 45);
     });
 
-    test('maps "not available" SOG/COG/heading sentinels to null', () {
+    test('maps not available SOG, COG, and heading sentinels to null', () {
       final results = decodeBits(
         buildType18(
           mmsi: 338123456,
@@ -176,17 +172,17 @@ void main() {
       w.uint(19, 6);
       w.uint(0, 2);
       w.uint(338999888, 30);
-      w.uint(0, 8); // reserved
-      w.uint(102, 10); // SOG 10.2 kn
+      w.uint(0, 8);
+      w.uint(102, 10);
       w.uint(0, 1);
       w.sint((-87.61 * 600000).round(), 28);
       w.sint((41.88 * 600000).round(), 27);
       w.uint(150, 12);
       w.uint(14, 9);
-      w.uint(33, 6); // timestamp → 139
-      w.uint(0, 4); // reserved → 143
-      w.str('PEGASUS', 120); // name → 263
-      w.uint(36, 8); // ship type: sailing
+      w.uint(33, 6);
+      w.uint(0, 4);
+      w.str('PEGASUS', 120);
+      w.uint(36, 8);
       w.pad(312);
 
       final results = decodeBits(w.bits);
@@ -196,10 +192,10 @@ void main() {
       expect(report.mmsi, 338999888);
       expect(report.sog, closeTo(10.2, 1e-9));
 
-      final static_ = results.whereType<AisStaticData>().single;
-      expect(static_.name, 'PEGASUS');
-      expect(static_.shipType, 36);
-      expect(static_.callSign, isNull);
+      final staticData = results.whereType<AisStaticData>().single;
+      expect(staticData.name, 'PEGASUS');
+      expect(staticData.shipType, 36);
+      expect(staticData.callSign, isNull);
     });
   });
 
@@ -219,40 +215,40 @@ void main() {
       w.pad(168);
 
       final results = decodeBits(w.bits);
-      final static_ = results.single as AisStaticData;
-      expect(static_.mmsi, 338777666);
-      expect(static_.name, 'WINDSHADOW');
-      expect(static_.callSign, isNull);
-      expect(static_.shipType, isNull);
+      final staticData = results.single as AisStaticData;
+      expect(staticData.mmsi, 338777666);
+      expect(staticData.name, 'WINDSHADOW');
+      expect(staticData.callSign, isNull);
+      expect(staticData.shipType, isNull);
     });
 
     test('part B carries ship type and call sign', () {
       final w = BitWriter()..bits.addAll(header(338777666, 1));
-      w.uint(36, 8); // ship type: sailing → 48
-      w.uint(0, 42); // vendor id → 90
-      w.str('VA1234', 42); // call sign → 132
+      w.uint(36, 8);
+      w.uint(0, 42);
+      w.str('VA1234', 42);
       w.pad(168);
 
       final results = decodeBits(w.bits);
-      final static_ = results.single as AisStaticData;
-      expect(static_.mmsi, 338777666);
-      expect(static_.name, isNull);
-      expect(static_.callSign, 'VA1234');
-      expect(static_.shipType, 36);
+      final staticData = results.single as AisStaticData;
+      expect(staticData.mmsi, 338777666);
+      expect(staticData.name, isNull);
+      expect(staticData.callSign, 'VA1234');
+      expect(staticData.shipType, 36);
     });
   });
 
   group('Class A static data (type 5, multipart)', () {
-    test('reassembles two fragments and decodes name/call sign/type', () {
+    test('reassembles two fragments and decodes name, call sign, and type', () {
       final w = BitWriter();
       w.uint(5, 6);
       w.uint(0, 2);
-      w.uint(316555444, 30); // → 38
-      w.uint(0, 2); // AIS version → 40
-      w.uint(0, 30); // IMO → 70
-      w.str('CFN5678', 42); // call sign → 112
-      w.str('NORTHERN LIGHT', 120); // name → 232
-      w.uint(36, 8); // ship type → 240
+      w.uint(316555444, 30);
+      w.uint(0, 2);
+      w.uint(0, 30);
+      w.str('CFN5678', 42);
+      w.str('NORTHERN LIGHT', 120);
+      w.uint(36, 8);
       w.pad(424);
 
       final payload = encodePayload(w.bits);
@@ -269,15 +265,15 @@ void main() {
       expect(sentences, hasLength(1));
 
       final results = _decoder.decode(sentences.first);
-      final static_ = results.single as AisStaticData;
-      expect(static_.mmsi, 316555444);
-      expect(static_.name, 'NORTHERN LIGHT');
-      expect(static_.callSign, 'CFN5678');
-      expect(static_.shipType, 36);
+      final staticData = results.single as AisStaticData;
+      expect(staticData.mmsi, 316555444);
+      expect(staticData.name, 'NORTHERN LIGHT');
+      expect(staticData.callSign, 'CFN5678');
+      expect(staticData.shipType, 36);
     });
   });
 
-  group('NMEA parser', () {
+  group('NMEA parser and codec', () {
     test('rejects sentences with a bad checksum', () {
       final good = aivdm(encodePayload(buildType18(mmsi: 1)));
       final bad = '${good.substring(0, good.length - 2)}00';
@@ -286,9 +282,19 @@ void main() {
 
     test('ignores unsupported message types', () {
       final w = BitWriter();
-      w.uint(21, 6); // aid-to-navigation report
+      w.uint(21, 6);
       w.pad(272);
       expect(decodeBits(w.bits), isEmpty);
+    });
+
+    test('decodes a line end to end through AisMessageCodec', () {
+      final codec = AisMessageCodec();
+      final results = codec.decodeLine(
+        aivdm(encodePayload(buildType18(mmsi: 338123456))),
+      );
+
+      expect(results, hasLength(1));
+      expect(results.single, isA<AisPositionReport>());
     });
   });
 }

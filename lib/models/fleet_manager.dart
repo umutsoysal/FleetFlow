@@ -72,8 +72,8 @@ class FleetManager extends ChangeNotifier {
   int messageCount = 0;
 
   NMEAConnection? _connection;
-  final _parser = NMEAParser();
-  final _aisDecoder = AISDecoder();
+  final _parser = NmeaParser();
+  final _aisDecoder = AisDecoder();
 
   int? ownMmsi = 235001001;
 
@@ -372,8 +372,7 @@ class FleetManager extends ChangeNotifier {
     if (_reconnectAttempts >= maxReconnectAttempts) {
       _shouldReconnect = false;
       _connectionState = ConnectionState.error;
-      _errorMessage =
-          '$message — gave up after $maxReconnectAttempts attempts';
+      _errorMessage = '$message — gave up after $maxReconnectAttempts attempts';
       notifyListeners();
       return;
     }
@@ -413,9 +412,9 @@ class FleetManager extends ChangeNotifier {
 
       for (final result in _aisDecoder.decode(sentence)) {
         switch (result) {
-          case AISPositionReport():
+          case AisPositionReport():
             _updateBoatPosition(result);
-          case AISStaticData():
+          case AisStaticData():
             _updateBoatStatic(result);
         }
       }
@@ -423,7 +422,7 @@ class FleetManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _updateBoatPosition(AISPositionReport report) {
+  void _updateBoatPosition(AisPositionReport report) {
     final boat = _boats.putIfAbsent(
       report.mmsi,
       () => Boat(
@@ -449,7 +448,7 @@ class FleetManager extends ChangeNotifier {
     boat.lastUpdate = DateTime.now();
   }
 
-  void _updateBoatStatic(AISStaticData data) {
+  void _updateBoatStatic(AisStaticData data) {
     final boat = _boats[data.mmsi];
     if (boat == null) return;
     final name = data.name?.trim();
