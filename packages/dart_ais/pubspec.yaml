@@ -1,6 +1,7 @@
 name: dart_ais
 description: Decode AIS AIVDM/AIVDO NMEA 0183 sentences into typed Dart models.
 version: 0.1.0
+repository: https://github.com/umutsoysal/FleetFlow/tree/main/packages/dart_ais
 
 environment:
   sdk: ^3.11.0
