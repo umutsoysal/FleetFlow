@@ -1,0 +1,79 @@
+name: Publish marine_ais
+
+on:
+  push:
+    tags:
+      - 'marine_ais-v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish package and create GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Validate tag matches package version
+        id: version
+        run: |
+          version=$(grep '^version:' packages/marine_ais/pubspec.yaml | awk '{print $2}')
+          expected_tag="marine_ais-v${version}"
+          if [ "${GITHUB_REF_NAME}" != "${expected_tag}" ]; then
+            echo "Expected tag ${expected_tag}, got ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install package dependencies
+        working-directory: packages/marine_ais
+        run: dart pub get
+
+      - name: Check whether version is already published
+        id: published
+        working-directory: packages/marine_ais
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          status=$(curl -s -o /dev/null -w "%{http_code}" "https://pub.dev/api/packages/marine_ais/versions/${version}")
+          if [ "${status}" = "200" ]; then
+            echo "already_published=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "already_published=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Analyze package
+        working-directory: packages/marine_ais
+        run: dart analyze
+
+      - name: Run package tests
+        working-directory: packages/marine_ais
+        run: dart test
+
+      - name: Publish to pub.dev
+        if: steps.published.outputs.already_published != 'true'
+        working-directory: packages/marine_ais
+        run: dart pub publish --force
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release-notes.txt <<EOF
+          Released \`marine_ais\` ${{ steps.version.outputs.version }}.
+
+          - Package: https://pub.dev/packages/marine_ais
+          - Source: https://github.com/umutsoysal/FleetFlow/tree/main/packages/marine_ais
+          - pub.dev publication already existed: ${{ steps.published.outputs.already_published }}
+          EOF
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "marine_ais ${{ steps.version.outputs.version }}" \
+            --notes-file release-notes.txt
