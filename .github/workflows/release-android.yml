@@ -91,10 +91,16 @@ jobs:
           version="${{ steps.version.outputs.version || steps.manual_version.outputs.version }}"
           apk_asset_name="FleetFlow-android-${version}.apk"
           aab_asset_name="FleetFlow-android-${version}.aab"
+          latest_apk_asset_name="FleetFlow-android-latest.apk"
+          latest_aab_asset_name="FleetFlow-android-latest.aab"
           cp build/app/outputs/flutter-apk/app-release.apk "${apk_asset_name}"
           cp build/app/outputs/bundle/release/app-release.aab "${aab_asset_name}"
+          cp build/app/outputs/flutter-apk/app-release.apk "${latest_apk_asset_name}"
+          cp build/app/outputs/bundle/release/app-release.aab "${latest_aab_asset_name}"
           echo "apk_asset_name=${apk_asset_name}" >> "${GITHUB_OUTPUT}"
           echo "aab_asset_name=${aab_asset_name}" >> "${GITHUB_OUTPUT}"
+          echo "latest_apk_asset_name=${latest_apk_asset_name}" >> "${GITHUB_OUTPUT}"
+          echo "latest_aab_asset_name=${latest_aab_asset_name}" >> "${GITHUB_OUTPUT}"
 
       - name: Create GitHub release for tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -115,6 +121,8 @@ jobs:
             "${GITHUB_REF_NAME}" \
             "${{ steps.artifact.outputs.apk_asset_name }}" \
             "${{ steps.artifact.outputs.aab_asset_name }}" \
+            "${{ steps.artifact.outputs.latest_apk_asset_name }}" \
+            "${{ steps.artifact.outputs.latest_aab_asset_name }}" \
             --clobber
 
       - name: Upload Android artifacts as workflow artifact
@@ -125,3 +133,5 @@ jobs:
           path: |
             ${{ steps.artifact.outputs.apk_asset_name }}
             ${{ steps.artifact.outputs.aab_asset_name }}
+            ${{ steps.artifact.outputs.latest_apk_asset_name }}
+            ${{ steps.artifact.outputs.latest_aab_asset_name }}

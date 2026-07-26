@@ -10,7 +10,8 @@ An offshore race tracker for sailboats. FleetFlow connects to a **B&G Zeus3** or
 
 ## Downloads
 
-- Download the latest `FleetFlow-android-<version>.apk` from [GitHub Releases](https://github.com/umutsoysal/FleetFlow/releases) for direct Android installation.
+- Download the latest Android APK directly: [FleetFlow-android-latest.apk](https://github.com/umutsoysal/FleetFlow/releases/latest/download/FleetFlow-android-latest.apk)
+- Browse all release assets on [GitHub Releases](https://github.com/umutsoysal/FleetFlow/releases).
 - `FleetFlow-android-<version>.aab` is also attached to each release for Play Store style distribution workflows.
 - `marine_ais` is published on [pub.dev/packages/marine_ais](https://pub.dev/packages/marine_ais).
 - iOS distribution is best handled through TestFlight rather than direct GitHub downloads.
